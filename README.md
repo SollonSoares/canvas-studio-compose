@@ -10,7 +10,7 @@ Este projeto foi concebido a partir da transição de uma arquitetura Web impera
 
 ### 📂 Estrutura Estrita de Diretórios
 
-``text
+```text
 app/src/main/java/com/canvasstudio/
 ├── core/
 │   ├── data/
