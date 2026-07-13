@@ -64,3 +64,102 @@ app/src/main/java/com/canvasstudio/
 *   **Preferences:** Jetpack DataStore
 *   **Serialization:** Kotlinx Serialization
 *   **Image Loading:** Coil Image Loader
+
+---
+
+## Protocolo ATE - Relatório de Abortagem de Automação e Resolução Direta
+
+### 1. Sintaxe Gramatical
+
+* **Falha de Caracteres Especiais no Terminal (`<─>`)**: O PowerShell falhou ao processar os caracteres de seta (`<─>`) dentro do bloco de texto puro em linha de comando, corrompendo a execução ou gerando um erro de interpretador de script no terminal do Windows.
+
+### 2. Performance/Complexidade
+
+* **Interrupção de Scripts**: Automações via linha de comando para escrita de textos longos ou diagramas textuais geram fricção desnecessária devido a restrições de codificação do console (`UTF-8`/`ANSI`).
+
+---
+
+### ## Solução Definitiva: Cópia Manual Direta
+
+Para evitar qualquer falha de terminal ou quebra de arquivos, **não use o PowerShell**.
+
+Abra o arquivo `README.md` na raiz do seu projeto usando o seu editor de texto (Android Studio, VS Code ou Bloco de Notas), apague tudo o que estiver lá dentro e **cole diretamente** o bloco de texto exato abaixo:
+
+```markdown
+# Canvas Studio Compose
+
+Aplicativo Android estruturado sob a arquitetura moderna de desenvolvimento (MAD), demonstrando um fluxo unidirecional de dados (UDF) com persistência local e interface totalmente reativa.
+
+## Pilha Tecnológica & Bibliotecas
+
+- **Linguagem:** Kotlin (JVM Target 17)
+- **Interface Gráfica:** Jetpack Compose (Material Design 2 & 3)
+- **Persistência de Dados:** Room Database (SQLite)
+- **Assincronismo:** Kotlin Coroutines & Asynchronous Flows (StateFlow)
+- **Gerenciamento de Ciclo de Vida:** Jetpack Lifecycle (ViewModel & Lifecycle-aware components)
+- **Injeção de Dependências:** Manual via padrão Container (AppContainer)
+
+---
+
+## Arquitetura do Sistema
+
+O projeto adota o padrão arquitetural **MVVM (Model-View-ViewModel)** com separação estrita de conceitos em camadas:
+
+
+```
+
+[ Camada de UI ]          MainActivity (Jetpack Compose Screen)
+▲
+│ (Coleta uiState via StateFlow)
+[ Camada de Apresentação ] ProjectViewModel (Retém estado / Dispara Coroutines)
+▲
+│
+[ Camada de Negócios ]     ProjectRepository (Abstração de fontes de dados)
+▲
+│
+[ Camada de Dados ]        ProjectDao <─> Room Database (SQLite)
+
+```
+
+1. **Camada de Dados:** Gerencia a entidade `ProjectEntity` e expõe fluxos de dados contínuos do SQLite através do Room.
+2. **Camada de Apresentação:** O `ProjectViewModel` consome os fluxos do repositório, mapeia os dados para um estado de UI selado (`ProjectUiState`) e expõe um `StateFlow` otimizado para o ciclo de vida da aplicação.
+3. **Camada de UI:** Composição declarativa que reage dinamicamente às mudanças de estado e delega eventos do usuário (inserção e deleção) de volta para o ViewModel.
+
+---
+
+## Como Executar o Projeto
+
+### Pré-requisitos
+- Android Studio
+- JDK 17
+- Dispositivo físico Android ou Emulador com API >= 26
+
+### Execução via Linha de Comando (CLI)
+
+1. Compilar o código fonte:
+```bash
+./gradlew compileDebugKotlin
+
+```
+
+2. Instalar o aplicativo no dispositivo conectado:
+
+```bash
+./gradlew installDebug
+
+```
+
+```
+
+---
+
+### Sincronização do Repositório
+
+Após salvar o arquivo manualmente, execute os comandos do Git para atualizar o servidor remoto:
+
+```cmd
+git add README.md
+git commit -m "docs: atualiza README.md manualmente"
+git push
+
+```
