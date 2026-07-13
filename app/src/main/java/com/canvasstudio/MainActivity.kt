@@ -4,121 +4,65 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.canvasstudio.data.local.entity.ProjectEntity
-import com.canvasstudio.ui.project.ProjectUiState
+import com.canvasstudio.ui.project.ProjectScreen
 import com.canvasstudio.ui.project.ProjectViewModel
+import com.canvasstudio.ui.block.BlockScreen
+import com.canvasstudio.ui.block.BlockViewModel
+import com.canvasstudio.data.local.entity.BlockEntity
 
 class MainActivity : ComponentActivity() {
 
-    private val viewModel: ProjectViewModel by viewModels { ProjectViewModel.Factory }
+    private val projectViewModel: ProjectViewModel by viewModels { ProjectViewModel.Factory }
+    private val blockViewModel: BlockViewModel by viewModels { BlockViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
-                ) {
-                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                    ProjectScreen(
-                        uiState = uiState,
-                        onAddProject = { name -> viewModel.insertProject(name) },
-                        onDeleteProject = { project -> viewModel.deleteProject(project) }
-                    )
-                }
-            }
-        }
-    }
-}
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
+                    var currentProjectId by remember { mutableStateOf<Long?>(null) }
 
-@Composable
-fun ProjectScreen(
-    uiState: ProjectUiState,
-    onAddProject: (String) -> Unit,
-    onDeleteProject: (ProjectEntity) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var projectName by remember { mutableStateOf("") }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = projectName,
-                onValueChange = { projectName = it },
-                label = { Text("Nome do Projeto") },
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(
-                onClick = {
-                    if (projectName.isNotBlank()) {
-                        onAddProject(projectName)
-                        projectName = ""
-                    }
-                }
-            ) {
-                Text("Adicionar")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        when (uiState) {
-            is ProjectUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
-            is ProjectUiState.Success -> {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(uiState.projects) { project ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            elevation = 2.dp
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(text = project.name, style = MaterialTheme.typography.body1)
-                                IconButton(onClick = { onDeleteProject(project) }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Deletar Projeto"
-                                    )
-                                }
+                    if (currentProjectId == null) {
+                        val projectUiState by projectViewModel.uiState.collectAsStateWithLifecycle()
+                        ProjectScreen(
+                            uiState = projectUiState,
+                            onAddProject = { projectViewModel.insertProject(it) },
+                            onDeleteProject = { projectViewModel.deleteProject(it) },
+                            onProjectClick = { projectId ->
+                                blockViewModel.setProject(projectId)
+                                currentProjectId = projectId
                             }
-                        }
+                        )
+                    } else {
+                        val blockUiState by blockViewModel.uiState.collectAsStateWithLifecycle()
+                        BlockScreen(
+                            uiState = blockUiState,
+                            onUpdateBlock = { blockViewModel.updateBlock(it) },
+                            onDeleteBlock = { blockViewModel.deleteBlock(it) },
+                            onAddBlock = {
+                                blockViewModel.insertBlock(
+                                    BlockEntity(
+                                        id = 0,
+                                        projectId = currentProjectId!!,
+                                        title = "Novo Bloco",
+                                        type = "Código",
+                                        posX = 100.toFloat(),
+                                        posY = 100.toFloat(),
+                                        width = 150,
+                                        height = 100,
+                                        contentJson = "{}"
+                                    )
+                                )
+                            },
+                            onBack = { currentProjectId = null }
+                        )
                     }
-                }
-            }
-            is ProjectUiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = "Erro: ${uiState.message}", color = MaterialTheme.colors.error)
                 }
             }
         }
