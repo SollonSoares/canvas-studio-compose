@@ -88,6 +88,9 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val appliedQuery by viewModel.appliedQuery.collectAsStateWithLifecycle()
 
+    val brandTitle by viewModel.brandTitle.collectAsStateWithLifecycle()
+    var showSettingsModal by remember { mutableStateOf(false) }
+
     // Launcher para selecionar arquivo JSON
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -140,9 +143,12 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
         scaffoldState = scaffoldState,
         topBar = {
             TopAppBar(
-                title = { Text("Canvas Studio", color = TextMain, fontWeight = FontWeight.Bold) },
+                title = { Text(brandTitle, color = TextMain, fontWeight = FontWeight.Bold) },
                 backgroundColor = BgMenu,
                 actions = {
+                    IconButton(onClick = { showSettingsModal = true }) {
+                        Icon(Icons.Default.Settings, "Configurações", tint = Accent)
+                    }
                     IconButton(onClick = { scale = 1f; offset = Offset.Zero }) {
                         Icon(Icons.Default.FilterCenterFocus, "Resetar Visão", tint = Accent)
                     }
@@ -167,6 +173,7 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
             ) { Icon(Icons.Default.Add, "Adicionar", tint = Color.White) }
         },
         drawerContent = { 
+            val modules by viewModel.modulesState.collectAsState()
             SidebarContent(
                 q = searchQuery, 
                 onQ = { viewModel.setSearchQuery(it) }, 
@@ -177,7 +184,9 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                 onImp = { importLauncher.launch("*/*") }, 
                 onExp = { exportLauncher.launch("canvas_export.json") },
                 onClr = { viewModel.clearCanvas() },
-                onGen = { viewModel.generateTestBlocks(50) }
+                onGen = { viewModel.generateTestBlocks(50) },
+                modules = modules,
+                onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) }
             ) 
         }
     ) { padding ->
@@ -256,8 +265,68 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
             editingBlock?.let { block ->
                 EditBlockDialog(block, { editingBlock = null }, { viewModel.updateBlock(it); editingBlock = null }, { viewModel.updateBlockLive(it) })
             }
+
+            if (showSettingsModal) {
+                val modules by viewModel.modulesState.collectAsState()
+                SettingsModal(
+                    title = brandTitle,
+                    onTitleChange = { viewModel.setBrandTitle(it) },
+                    modules = modules,
+                    onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) },
+                    onDismiss = { showSettingsModal = false }
+                )
+            }
         }
     }
+}
+
+@Composable
+fun SettingsModal(
+    title: String,
+    onTitleChange: (String) -> Unit,
+    modules: Map<String, Boolean>,
+    onToggleModule: (String, Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        backgroundColor = BgMenu,
+        shape = RoundedCornerShape(16.dp),
+        title = { Text("Configurações do Projeto", color = TextMain, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column {
+                    Text("NOME DO PROJETO", color = TextMain.copy(0.4f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    TextField(
+                        value = title,
+                        onValueChange = onTitleChange,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        colors = TextFieldDefaults.textFieldColors(
+                            textColor = TextMain,
+                            backgroundColor = Color.White.copy(0.05f),
+                            cursorColor = Accent,
+                            focusedIndicatorColor = Accent
+                        )
+                    )
+                }
+
+                Divider(color = Color.White.copy(0.05f))
+
+                Column {
+                    Text("MÓDULOS ATIVOS", color = TextMain.copy(0.4f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    ModuleToggle("📝 Texto", modules["text"] ?: true) { onToggleModule("text", it) }
+                    ModuleToggle("🖼️ Imagem", modules["image"] ?: true) { onToggleModule("image", it) }
+                    ModuleToggle("📊 Gráfico", modules["chart"] ?: true) { onToggleModule("chart", it) }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(backgroundColor = Accent)) {
+                Text("Concluído", color = Color.White)
+            }
+        }
+    )
 }
 
 @Composable
@@ -559,17 +628,23 @@ fun ImageBlock(block: BlockEntity) {
 }
 
 @Composable
-fun SidebarContent(q: String, onQ: (String) -> Unit, onSearch: () -> Unit, onImp: () -> Unit, onExp: () -> Unit, onClr: () -> Unit, onGen: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(BgMenu).padding(24.dp)) {
-        Text("Canvas Studio", color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(24.dp))
-        Text("BUSCAR", color = TextMain.copy(0.4f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        
+fun SidebarContent(
+    q: String, 
+    onQ: (String) -> Unit, 
+    onSearch: () -> Unit, 
+    onImp: () -> Unit, 
+    onExp: () -> Unit, 
+    onClr: () -> Unit, 
+    onGen: () -> Unit,
+    modules: Map<String, Boolean>,
+    onToggleModule: (String, Boolean) -> Unit
+) {
+    Column(Modifier.fillMaxSize().background(BgMenu).padding(24.dp).verticalScroll(rememberScrollState())) {
         TextField(
             value = q,
             onValueChange = onQ,
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            placeholder = { Text("Título ou conteúdo...", color = TextMain.copy(0.3f), fontSize = 14.sp) },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Buscar no canvas...", color = TextMain.copy(0.3f), fontSize = 14.sp) },
             leadingIcon = { Icon(Icons.Default.Search, null, tint = Accent, modifier = Modifier.size(20.dp)) },
             trailingIcon = {
                 if (q.isNotEmpty()) {
@@ -592,17 +667,8 @@ fun SidebarContent(q: String, onQ: (String) -> Unit, onSearch: () -> Unit, onImp
             )
         )
 
-        Spacer(Modifier.height(8.dp))
-        Button(
-            onClick = onSearch,
-            modifier = Modifier.fillMaxWidth().height(40.dp),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(backgroundColor = Accent)
-        ) {
-            Text("EXECUTAR BUSCA", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
+        Spacer(Modifier.height(24.dp))
 
-        Spacer(Modifier.height(32.dp))
         SidebarButton("📥 Importar JSON", Accent, onImp)
         Spacer(Modifier.height(8.dp))
         SidebarButton("📤 Exportar JSON", Accent, onExp)
@@ -610,6 +676,28 @@ fun SidebarContent(q: String, onQ: (String) -> Unit, onSearch: () -> Unit, onImp
         SidebarButton("🧪 Gerar 50 Blocos (Teste)", Color.Cyan, onGen)
         Spacer(Modifier.height(8.dp))
         SidebarButton("💥 Limpar Canvas", Color.Red, onClr)
+    }
+}
+
+@Composable
+fun ModuleToggle(label: String, isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .clickable { onToggle(!isEnabled) },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = isEnabled,
+            onCheckedChange = onToggle,
+            colors = CheckboxDefaults.colors(
+                checkedColor = Accent,
+                uncheckedColor = TextMain.copy(0.3f),
+                checkmarkColor = Color.White
+            )
+        )
+        Text(label, color = if (isEnabled) TextMain else TextMain.copy(0.5f), fontSize = 14.sp)
     }
 }
 

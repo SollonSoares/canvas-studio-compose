@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.canvasstudio.data.local.dao.BlockDao
 import com.canvasstudio.data.local.entity.BlockEntity
+import com.canvasstudio.data.local.preferences.UserPreferencesManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,7 +22,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.serialization.json.*
 
-class BlockViewModel(private val blockDao: BlockDao) : ViewModel() {
+class BlockViewModel(
+    private val blockDao: BlockDao,
+    private val userPreferencesManager: UserPreferencesManager
+) : ViewModel() {
     private val _events = MutableSharedFlow<String>()
     val events: SharedFlow<String> = _events.asSharedFlow()
 
@@ -34,26 +38,42 @@ class BlockViewModel(private val blockDao: BlockDao) : ViewModel() {
     private val searchableCache = mutableMapOf<Long, String>()
     private val contentHashCache = mutableMapOf<Long, Int>()
 
+    val modulesState = userPreferencesManager.modulesStateFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    val brandTitle = userPreferencesManager.brandTitleFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Canvas Studio")
+
+    fun setBrandTitle(title: String) = viewModelScope.launch {
+        userPreferencesManager.setBrandTitle(title)
+    }
+
     @OptIn(FlowPreview::class)
     val uiState = combine(
         blockDao.getAllBlocks(),
-        _appliedQuery
-    ) { blocks, query ->
+        _appliedQuery,
+        userPreferencesManager.modulesStateFlow
+    ) { blocks, query, modules ->
+        val filteredByModule = blocks.filter { modules[it.type.lowercase()] ?: true }
+        
         if (query.isBlank()) {
-            BlockUiState.Success(blocks)
+            BlockUiState.Success(filteredByModule)
         } else {
             val words = query.normalize().split("\\s+".toRegex()).filter { it.isNotEmpty() }
             
-            val filtered = blocks.filter { block ->
+            val filteredBySearch = filteredByModule.filter { block ->
                 val searchableText = getSearchableText(block)
-                // Lógica AND: O bloco deve conter todas as palavras da busca
                 words.all { word -> searchableText.contains(word) }
             }
-            BlockUiState.Success(filtered)
+            BlockUiState.Success(filteredBySearch)
         }
     }
     .flowOn(Dispatchers.Default)
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BlockUiState.Loading)
+
+    fun toggleModule(type: String, enabled: Boolean) = viewModelScope.launch {
+        userPreferencesManager.setModuleEnabled(type, enabled)
+    }
 
     private fun getSearchableText(block: BlockEntity): String {
         val contentHash = block.title.hashCode() + block.contentJson.hashCode()
