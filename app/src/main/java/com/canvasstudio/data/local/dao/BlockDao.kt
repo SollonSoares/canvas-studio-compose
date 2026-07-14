@@ -1,28 +1,26 @@
 package com.canvasstudio.data.local.dao
 
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Update
+import androidx.room.*
 import com.canvasstudio.data.local.entity.BlockEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BlockDao {
-    @Query("SELECT * FROM canvas_blocks WHERE projectId = :projectId")
-    fun getBlocksForProject(projectId: Long): Flow<List<BlockEntity>>
+    @Query("SELECT * FROM canvas_blocks")
+    fun getAllBlocks(): Flow<List<BlockEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertBlock(block: BlockEntity): Long
+    suspend fun insert(block: BlockEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(blocks: List<BlockEntity>)
 
     @Update
-    suspend fun updateBlock(block: BlockEntity)
+    suspend fun update(block: BlockEntity)
 
     @Delete
-    suspend fun deleteBlock(block: BlockEntity)
+    suspend fun delete(block: BlockEntity)
 
-    @Query("DELETE FROM canvas_blocks WHERE projectId = :projectId")
-    suspend fun clearCanvas(projectId: Long)
+    @Query("DELETE FROM canvas_blocks")
+    suspend fun clearCanvas()
 }
