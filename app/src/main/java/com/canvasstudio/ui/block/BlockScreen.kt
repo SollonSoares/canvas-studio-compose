@@ -47,12 +47,35 @@ import kotlinx.serialization.json.*
 import java.util.Locale
 import kotlin.math.roundToInt
 
-// Design System
-val BgMain = Color(0xFF1C1C1E)
-val BgMenu = Color(0xF22C2C2E)
-val Accent = Color(0xFF0A84FF)
-val CanvasGrid = Color(0xFF2C2C2E)
-val TextMain = Color(0xFFF5F5F7)
+data class CanvasColors(
+    val bgMain: Color,
+    val bgMenu: Color,
+    val accent: Color,
+    val canvasGrid: Color,
+    val textMain: Color,
+    val border: Color
+)
+
+@Composable
+fun getDynamicColors() = if (MaterialTheme.colors.isLight) {
+    CanvasColors(
+        bgMain = Color(0xFFF2F2F7),
+        bgMenu = Color(0xFFFFFFFF),
+        accent = Color(0xFF007AFF),
+        canvasGrid = Color(0xFFD1D1D6),
+        textMain = Color(0xFF1C1C1E),
+        border = Color(0xFFD1D1D6)
+    )
+} else {
+    CanvasColors(
+        bgMain = Color(0xFF1C1C1E),
+        bgMenu = Color(0xF22C2C2E),
+        accent = Color(0xFF0A84FF),
+        canvasGrid = Color(0xFF2C2C2E),
+        textMain = Color(0xFFF5F5F7),
+        border = Color.White.copy(alpha = 0.15f)
+    )
+}
 
 fun parseRichText(text: String, defaultSize: Int = 14): AnnotatedString {
     val builder = AnnotatedString.Builder()
@@ -82,6 +105,7 @@ fun parseRichText(text: String, defaultSize: Int = 14): AnnotatedString {
 
 @Composable
 fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> Unit) {
+    val colors = getDynamicColors()
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -90,9 +114,9 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
     val appliedQuery by viewModel.appliedQuery.collectAsStateWithLifecycle()
 
     val brandTitle by viewModel.brandTitle.collectAsStateWithLifecycle()
+    val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
     var showSettingsModal by remember { mutableStateOf(false) }
 
-    // Launcher para selecionar arquivo JSON
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -111,7 +135,6 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
         }
     }
 
-    // Launcher para exportar arquivo JSON
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
@@ -132,7 +155,6 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
         }
     }
 
-    // Estado da Câmera Infinita
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val transformState = rememberTransformableState { zoomChange, offsetChange, _ ->
@@ -144,19 +166,19 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
         scaffoldState = scaffoldState,
         topBar = {
             TopAppBar(
-                title = { Text(brandTitle, color = TextMain, fontWeight = FontWeight.Bold) },
-                backgroundColor = BgMenu,
+                title = { Text(brandTitle, color = colors.textMain, fontWeight = FontWeight.Bold) },
+                backgroundColor = colors.bgMenu,
                 actions = {
                     IconButton(onClick = { showSettingsModal = true }) {
-                        Icon(Icons.Default.Settings, "Configurações", tint = Accent)
+                        Icon(Icons.Default.Settings, "Configurações", tint = colors.accent)
                     }
                     IconButton(onClick = { scale = 1f; offset = Offset.Zero }) {
-                        Icon(Icons.Default.FilterCenterFocus, "Resetar Visão", tint = Accent)
+                        Icon(Icons.Default.FilterCenterFocus, "Resetar Visão", tint = colors.accent)
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = { scope.launch { scaffoldState.drawerState.open() } }) {
-                        Icon(Icons.Default.Menu, "Menu", tint = Accent)
+                        Icon(Icons.Default.Menu, "Menu", tint = colors.accent)
                     }
                 }
             )
@@ -165,14 +187,12 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
             val density = LocalDensity.current
             FloatingActionButton(
                 onClick = {
-                    // Adiciona o bloco na posição relativa ao centro da visão atual
-                    // Convertendo pixels da câmera para DP para consistência no canvas
                     val spawnX = ((-offset.x / density.density) + 200f) / scale
                     val spawnY = ((-offset.y / density.density) + 200f) / scale
                     viewModel.insertBlock(BlockEntity(0, 0, "Novo Bloco", "text", spawnX, spawnY, 220, 180, 
                         "{\"text\":\"**Título**\\nEscreva aqui...\", \"titleSize\": 13, \"titleBold\": true, \"align\": \"left\"}"))
                 },
-                backgroundColor = Accent
+                backgroundColor = colors.accent
             ) { Icon(Icons.Default.Add, "Adicionar", tint = Color.White) }
         },
         drawerContent = { 
@@ -190,12 +210,15 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                 onGen = { viewModel.generateTestBlocks(50) },
                 onOrg = { viewModel.autoOrganizeBlocks() },
                 modules = modules,
-                onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) }
+                onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) },
+                isDarkMode = isDarkMode,
+                onToggleTheme = { viewModel.toggleDarkMode() },
+                colors = colors
             ) 
         }
     ) { padding ->
         Box(
-            Modifier.padding(padding).fillMaxSize().background(BgMain)
+            Modifier.padding(padding).fillMaxSize().background(colors.bgMain)
                 .pointerInput(Unit) {
                     detectDragGestures { change, dragAmount ->
                         change.consume()
@@ -204,9 +227,8 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                 }
                 .transformable(state = transformState)
         ) {
-            CanvasBackground({ scale }, { offset })
+            CanvasBackground({ scale }, { offset }, colors.canvasGrid)
 
-            // MESA INFINITA (Apenas os blocos)
             Box(Modifier.fillMaxSize().graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -222,25 +244,23 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                                 { w, h -> viewModel.updateBlockLive(block.copy(width = w, height = h)) },
                                 { viewModel.deleteBlock(block) },
                                 { editingBlock = block },
-                                currentScale = { scale }
+                                currentScale = { scale },
+                                colors = colors
                             )
                         }
                     }
                 }
             }
 
-            // CAMADA DE INTERFACE SOBRE O CANVAS (Sempre visível/estática)
             if (uiState is BlockUiState.Success) {
                 val blocks = (uiState as BlockUiState.Success).blocks
-                
-                // Feedback de Busca Ativa
                 if (appliedQuery.isNotEmpty()) {
                     Column(
                         Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Surface(
-                            color = Accent.copy(alpha = 0.9f),
+                            color = colors.accent.copy(alpha = 0.9f),
                             shape = RoundedCornerShape(20.dp),
                             elevation = 4.dp
                         ) {
@@ -256,18 +276,18 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                         
                         if (blocks.isEmpty()) {
                             Spacer(Modifier.height(100.dp))
-                            Text("Nenhum bloco corresponde à sua busca.", color = TextMain.copy(0.4f), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            Text("Nenhum bloco corresponde à sua busca.", color = colors.textMain.copy(0.4f), fontSize = 16.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                 }
             }
 
             if (uiState is BlockUiState.Loading) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center), color = Accent)
+                CircularProgressIndicator(Modifier.align(Alignment.Center), color = colors.accent)
             }
             
             editingBlock?.let { block ->
-                EditBlockDialog(block, { editingBlock = null }, { viewModel.updateBlock(it); editingBlock = null }, { viewModel.updateBlockLive(it) })
+                EditBlockDialog(block, { editingBlock = null }, { viewModel.updateBlock(it); editingBlock = null }, { viewModel.updateBlockLive(it) }, colors)
             }
 
             if (showSettingsModal) {
@@ -277,7 +297,8 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     onTitleChange = { viewModel.setBrandTitle(it) },
                     modules = modules,
                     onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) },
-                    onDismiss = { showSettingsModal = false }
+                    onDismiss = { showSettingsModal = false },
+                    colors = colors
                 )
             }
         }
@@ -285,56 +306,41 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
 }
 
 @Composable
-fun SettingsModal(
-    title: String,
-    onTitleChange: (String) -> Unit,
-    modules: Map<String, Boolean>,
-    onToggleModule: (String, Boolean) -> Unit,
-    onDismiss: () -> Unit
-) {
+fun SettingsModal(title: String, onTitleChange: (String) -> Unit, modules: Map<String, Boolean>, onToggleModule: (String, Boolean) -> Unit, onDismiss: () -> Unit, colors: CanvasColors) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        backgroundColor = BgMenu,
+        backgroundColor = colors.bgMenu,
         shape = RoundedCornerShape(16.dp),
-        title = { Text("Configurações do Projeto", color = TextMain, fontWeight = FontWeight.Bold) },
+        title = { Text("Configurações", color = colors.textMain, fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column {
-                    Text("NOME DO PROJETO", color = TextMain.copy(0.4f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    TextField(
-                        value = title,
-                        onValueChange = onTitleChange,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        colors = TextFieldDefaults.textFieldColors(
-                            textColor = TextMain,
-                            backgroundColor = Color.White.copy(0.05f),
-                            cursorColor = Accent,
-                            focusedIndicatorColor = Accent
-                        )
-                    )
-                }
-
-                Divider(color = Color.White.copy(0.05f))
-
-                Column {
-                    Text("MÓDULOS ATIVOS", color = TextMain.copy(0.4f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    ModuleToggle("📝 Texto", modules["text"] ?: true) { onToggleModule("text", it) }
-                    ModuleToggle("🖼️ Imagem", modules["image"] ?: true) { onToggleModule("image", it) }
-                    ModuleToggle("📊 Gráfico", modules["chart"] ?: true) { onToggleModule("chart", it) }
+            Column(Modifier.fillMaxWidth()) {
+                Text("Título do Projeto", color = colors.textMain.copy(0.6f), fontSize = 12.sp)
+                TextField(
+                    value = title,
+                    onValueChange = onTitleChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.textFieldColors(textColor = colors.textMain, cursorColor = colors.accent, focusedIndicatorColor = colors.accent, backgroundColor = Color.Transparent)
+                )
+                
+                Spacer(Modifier.height(24.dp))
+                
+                Text("Módulos Habilitados", color = colors.textMain.copy(0.6f), fontSize = 12.sp)
+                Spacer(Modifier.height(8.dp))
+                modules.forEach { (type, enabled) ->
+                    ModuleToggle(type.replaceFirstChar { it.uppercase() }, enabled, { onToggleModule(type, it) }, colors)
                 }
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(backgroundColor = Accent)) {
-                Text("Concluído", color = Color.White)
+            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(backgroundColor = colors.accent)) {
+                Text("Fechar", color = Color.White)
             }
         }
     )
 }
 
 @Composable
-fun CanvasBackground(scale: () -> Float, offset: () -> Offset) {
+fun CanvasBackground(scale: () -> Float, offset: () -> Offset, gridColor: Color) {
     Canvas(modifier = Modifier.fillMaxSize()) {
         val s = scale()
         val o = offset()
@@ -347,7 +353,7 @@ fun CanvasBackground(scale: () -> Float, offset: () -> Offset) {
         while (x < size.width + gridSize) {
             var y = startY
             while (y < size.height + gridSize) {
-                drawCircle(CanvasGrid, dotRadius, Offset(x, y))
+                drawCircle(gridColor, dotRadius, Offset(x, y))
                 y += gridSize
             }
             x += gridSize
@@ -359,9 +365,9 @@ fun CanvasBackground(scale: () -> Float, offset: () -> Offset) {
 fun DraggableBlock(
     key: Long, block: BlockEntity, 
     onMove: (Float, Float) -> Unit, onResize: (Int, Int) -> Unit, 
-    onDelete: () -> Unit, onEdit: () -> Unit, currentScale: () -> Float
+    onDelete: () -> Unit, onEdit: () -> Unit, currentScale: () -> Float,
+    colors: CanvasColors
 ) {
-    // Usar rememberUpdatedState para garantir que as lambdas e valores atuais sejam usados dentro do pointerInput
     val updatedOnMove by rememberUpdatedState(onMove)
     val updatedOnResize by rememberUpdatedState(onResize)
     val updatedScale by rememberUpdatedState(currentScale)
@@ -373,7 +379,6 @@ fun DraggableBlock(
 
     val density = LocalDensity.current
     
-    // Sincroniza o estado local caso o bloco mude externamente (ex: via diálogo de edição ou auto-organização)
     LaunchedEffect(block.posX, block.posY, block.width, block.height) {
         offsetX = block.posX
         offsetY = block.posY
@@ -387,13 +392,10 @@ fun DraggableBlock(
 
     Box(
         modifier = Modifier.offset { 
-            IntOffset(
-                (offsetX * density.density).roundToInt(), 
-                (offsetY * density.density).roundToInt()
-            ) 
+            IntOffset((offsetX * density.density).roundToInt(), (offsetY * density.density).roundToInt()) 
         }.size(width.dp, height.dp)
-            .background(BgMenu.copy(alpha = 0.95f), RoundedCornerShape(12.dp))
-            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+            .background(colors.bgMenu.copy(alpha = 0.95f), RoundedCornerShape(12.dp))
+            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
     ) {
         Column {
             Row(Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -401,28 +403,27 @@ fun DraggableBlock(
                     detectDragGestures(onDragEnd = { updatedOnMove(offsetX, offsetY) }) { change, drag ->
                         change.consume()
                         val s = updatedScale()
-                        // Conversão de delta pixels para DP
                         offsetX += drag.x / (s * density.density)
                         offsetY += drag.y / (s * density.density)
                     }
                 }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(8.dp).background(Accent, CircleShape))
+                    Box(Modifier.size(8.dp).background(colors.accent, CircleShape))
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = block.title, 
-                        color = TextMain, 
+                        color = colors.textMain, 
                         fontSize = (metadata?.get("titleSize")?.jsonPrimitive?.intOrNull ?: 13).sp, 
                         fontWeight = FontWeight.Bold, 
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Edit, null, tint = TextMain.copy(0.4f), modifier = Modifier.size(14.dp)) }
-                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Close, null, tint = TextMain.copy(0.4f), modifier = Modifier.size(14.dp)) }
+                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Edit, null, tint = colors.textMain.copy(0.4f), modifier = Modifier.size(14.dp)) }
+                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Close, null, tint = colors.textMain.copy(0.4f), modifier = Modifier.size(14.dp)) }
             }
             Box(Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 8.dp).clickable { onEdit() }) {
                 when (block.type.lowercase()) {
-                    "chart" -> com.canvasstudio.ui.block.modules.ChartBlock(block)
+                    "chart" -> com.canvasstudio.ui.block.modules.ChartBlock(block, colors = colors)
                     "image" -> ImageBlock(block)
                     else -> {
                         val text = remember(metadata, block.contentJson) {
@@ -433,7 +434,7 @@ fun DraggableBlock(
                         Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                             Text(
                                 text = richText, 
-                                color = TextMain.copy(0.8f), 
+                                color = colors.textMain.copy(0.8f), 
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = when(metadata?.get("align")?.jsonPrimitive?.content) { 
                                     "center" -> TextAlign.Center; 
@@ -453,272 +454,112 @@ fun DraggableBlock(
                 width = (width + (drag.x / (density.density * s)).toInt()).coerceAtLeast(100)
                 height = (height + (drag.y / (density.density * s)).toInt()).coerceAtLeast(80)
             }
-        }) { Canvas(Modifier.fillMaxSize()) { drawLine(Accent.copy(0.5f), Offset(size.width, 0f), Offset(0f, size.height), 2.dp.toPx()) } }
+        }) { Canvas(Modifier.fillMaxSize()) { drawLine(colors.accent.copy(0.5f), Offset(size.width, 0f), Offset(0f, size.height), 2.dp.toPx()) } }
     }
 }
 
 @Composable
-fun EditBlockDialog(block: BlockEntity, onDismiss: () -> Unit, onConfirm: (BlockEntity) -> Unit, onLiveUpdate: (BlockEntity) -> Unit) {
+fun EditBlockDialog(block: BlockEntity, onDismiss: () -> Unit, onConfirm: (BlockEntity) -> Unit, onLiveUpdate: (BlockEntity) -> Unit, colors: CanvasColors) {
     var title by remember { mutableStateOf(block.title) }
-    var currentType by remember { mutableStateOf(block.type) }
-    val initialText = remember(block.id) {
-        try {
-            val json = Json.parseToJsonElement(block.contentJson).jsonObject
-            json["text"]?.jsonPrimitive?.content ?: json["url"]?.jsonPrimitive?.content ?: block.contentJson
-        } catch (e: Exception) { block.contentJson }
+    var type by remember { mutableStateOf(block.type) }
+    val initialContent = remember(block.contentJson) {
+        try { Json.parseToJsonElement(block.contentJson).jsonObject } catch (e: Exception) { buildJsonObject {} }
     }
-    var textFieldValue by remember { mutableStateOf(TextFieldValue(initialText)) }
-    var titleSize by remember { mutableIntStateOf(try { Json.parseToJsonElement(block.contentJson).jsonObject["titleSize"]?.jsonPrimitive?.intOrNull ?: 13 } catch(e: Exception) { 13 }) }
-    var align by remember { mutableStateOf(try { Json.parseToJsonElement(block.contentJson).jsonObject["align"]?.jsonPrimitive?.content ?: "left" } catch(e: Exception) { "left" }) }
-    var stats by remember { mutableStateOf(try {
-        val json = Json.parseToJsonElement(block.contentJson).jsonObject
-        listOf(
-            json["ninjutsu"]?.jsonPrimitive?.floatOrNull ?: 4f,
-            json["inteligencia"]?.jsonPrimitive?.floatOrNull ?: 4f,
-            json["chakra"]?.jsonPrimitive?.floatOrNull ?: 4f,
-            json["taijutsu"]?.jsonPrimitive?.floatOrNull ?: 4f,
-            json["vigor"]?.jsonPrimitive?.floatOrNull ?: 4f,
-            json["genjutsu"]?.jsonPrimitive?.floatOrNull ?: 4f
-        )
-    } catch (e: Exception) { listOf(4f, 4f, 4f, 4f, 4f, 4f) }) }
-
-    LaunchedEffect(title, textFieldValue.text, align, titleSize, currentType, stats) {
-        val json = when (currentType) {
-            "text" -> buildJsonObject { put("text", textFieldValue.text); put("titleSize", titleSize); put("titleBold", true); put("align", align) }.toString()
-            "image" -> buildJsonObject { put("url", textFieldValue.text) }.toString()
-            "chart" -> buildJsonObject {
-                put("ninjutsu", stats[0]); put("inteligencia", stats[1]); put("chakra", stats[2])
-                put("taijutsu", stats[3]); put("vigor", stats[4]); put("genjutsu", stats[5])
-            }.toString()
-            else -> textFieldValue.text
-        }
-        onLiveUpdate(block.copy(title = title, type = currentType, contentJson = json))
+    var textFieldValue by remember { 
+        val text = initialContent["text"]?.jsonPrimitive?.content ?: ""
+        mutableStateOf(TextFieldValue(text)) 
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss, backgroundColor = BgMenu, shape = RoundedCornerShape(16.dp),
-        title = { Text("Formatar Bloco", color = TextMain, fontWeight = FontWeight.Bold) },
+        onDismissRequest = onDismiss,
+        backgroundColor = colors.bgMenu,
+        shape = RoundedCornerShape(16.dp),
+        title = { Text("Editar Bloco", color = colors.textMain, fontWeight = FontWeight.Bold) },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                // PRÉ-VISUALIZAÇÃO
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("PRÉ-VISUALIZAÇÃO", color = TextMain.copy(0.4f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Box(Modifier.fillMaxWidth().heightIn(min = 80.dp, max = 180.dp).background(Color.Black.copy(0.3f), RoundedCornerShape(8.dp)).border(1.dp, Accent.copy(0.3f), RoundedCornerShape(8.dp)).padding(12.dp)) {
-                        Column(Modifier.verticalScroll(rememberScrollState())) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(6.dp).background(Accent, CircleShape))
-                                Spacer(Modifier.width(8.dp))
-                                Text(text = title, color = TextMain, fontSize = titleSize.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            if (currentType == "image") {
-                                Box(Modifier.fillMaxWidth().height(60.dp).background(Color.White.copy(0.05f), RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
-                                    if (textFieldValue.text.isNotEmpty()) AsyncImage(textFieldValue.text, null, Modifier.fillMaxSize().clip(RoundedCornerShape(4.dp)), contentScale = ContentScale.Crop)
-                                    else Text("🖼️", fontSize = 20.sp)
-                                }
-                            } else if (currentType == "chart") {
-                                Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                                    com.canvasstudio.ui.block.modules.ChartBlock(block.copy(type = "chart", contentJson = buildJsonObject {
-                                        put("ninjutsu", stats[0]); put("inteligencia", stats[1]); put("chakra", stats[2])
-                                        put("taijutsu", stats[3]); put("vigor", stats[4]); put("genjutsu", stats[5])
-                                    }.toString()))
-                                }
-                            } else {
-                                Text(text = parseRichText(textFieldValue.text), color = TextMain.copy(0.8f), fontSize = 13.sp, modifier = Modifier.fillMaxWidth(),
-                                     textAlign = when(align) { "center" -> TextAlign.Center; "right" -> TextAlign.End; else -> TextAlign.Start })
-                            }
-                        }
-                    }
-                }
-                Divider(color = Color.White.copy(0.05f))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("text", "image", "chart").forEach { type ->
-                        val sel = currentType == type
-                        Box(Modifier.weight(1f).height(32.dp).clip(RoundedCornerShape(6.dp)).background(if (sel) Accent else Color.White.copy(0.05f)).clickable { currentType = type }, contentAlignment = Alignment.Center) {
-                            Text(type.uppercase(), color = if (sel) Color.White else TextMain.copy(0.5f), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Título do Bloco", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    TextField(value = title, onValueChange = { title = it }, modifier = Modifier.fillMaxWidth(), colors = TextFieldDefaults.textFieldColors(textColor = TextMain, backgroundColor = Color.Black.copy(0.2f)))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Tam: $titleSize", color = TextMain, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { if (titleSize > 8) titleSize-- }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Remove, null, tint = Accent) }
-                        IconButton(onClick = { if (titleSize < 30) titleSize++ }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Add, null, tint = Accent) }
-                    }
-                }
-                if (currentType == "text") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Editor Rich Text", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            FormatAction(Icons.Default.FormatBold) { textFieldValue = insertTag(textFieldValue, "**", "**") }
-                            FormatAction(Icons.Default.FormatItalic) { textFieldValue = insertTag(textFieldValue, "*", "*") }
-                            FormatAction(Icons.Default.TextFields) { textFieldValue = insertTag(textFieldValue, "[size=20]", "[/size]") }
-                            Spacer(Modifier.width(8.dp))
-                            FormatAction(Icons.AutoMirrored.Filled.FormatAlignLeft, align == "left") { align = "left" }
-                            FormatAction(Icons.Default.FormatAlignCenter, align == "center") { align = "center" }
-                            FormatAction(Icons.AutoMirrored.Filled.FormatAlignRight, align == "right") { align = "right" }
-                        }
-                        TextField(value = textFieldValue, onValueChange = { textFieldValue = it }, modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp), colors = TextFieldDefaults.textFieldColors(textColor = TextMain, backgroundColor = Color.Black.copy(0.2f)))
-                    }
-                } else if (currentType == "image") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("URL da Imagem", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        TextField(value = textFieldValue, onValueChange = { textFieldValue = it }, modifier = Modifier.fillMaxWidth(), colors = TextFieldDefaults.textFieldColors(textColor = TextMain, backgroundColor = Color.Black.copy(0.2f)))
-                    }
-                } else if (currentType == "chart") {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Atributos do Gráfico", color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        val labels = listOf("Ninjutsu", "Inteligência", "Chakra", "Taijutsu", "Vigor", "Genjutsu")
-                        labels.forEachIndexed { index, label ->
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(label, color = TextMain, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                                    Text(stats[index].toString(), color = Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Slider(
-                                    value = stats[index],
-                                    onValueChange = { v -> stats = stats.toMutableList().apply { this[index] = (v * 10).roundToInt() / 10f } },
-                                    valueRange = 0f..8f,
-                                    colors = SliderDefaults.colors(thumbColor = Accent, activeTrackColor = Accent)
-                                )
-                            }
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                Text("Título", color = colors.textMain.copy(0.6f), fontSize = 12.sp)
+                TextField(value = title, onValueChange = { title = it }, modifier = Modifier.fillMaxWidth(), colors = TextFieldDefaults.textFieldColors(textColor = colors.textMain, cursorColor = colors.accent, focusedIndicatorColor = colors.accent, backgroundColor = Color.Transparent))
+                Spacer(Modifier.height(16.dp))
+                Text("Tipo", color = colors.textMain.copy(0.6f), fontSize = 12.sp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    listOf("text", "image", "chart").forEach { t ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { type = t }) {
+                            RadioButton(selected = type == t, onClick = { type = t }, colors = RadioButtonDefaults.colors(selectedColor = colors.accent))
+                            Text(t.replaceFirstChar { it.uppercase() }, color = colors.textMain, fontSize = 14.sp)
                         }
                     }
                 }
             }
         },
-        confirmButton = {
-            Button(onClick = {
-                val json = when (currentType) {
-                    "text" -> buildJsonObject { put("text", textFieldValue.text); put("titleSize", titleSize); put("titleBold", true); put("align", align) }.toString()
-                    "image" -> buildJsonObject { put("url", textFieldValue.text) }.toString()
-                    "chart" -> buildJsonObject {
-                        put("ninjutsu", stats[0]); put("inteligencia", stats[1]); put("chakra", stats[2])
-                        put("taijutsu", stats[3]); put("vigor", stats[4]); put("genjutsu", stats[5])
-                    }.toString()
-                    else -> textFieldValue.text
-                }
-                onConfirm(block.copy(title = title, type = currentType, contentJson = json))
-            }, colors = ButtonDefaults.buttonColors(backgroundColor = Accent)) { Text("Salvar", color = Color.White) }
-        }
+        confirmButton = { Button(onClick = { onConfirm(block.copy(title = title, type = type)) }, colors = ButtonDefaults.buttonColors(backgroundColor = colors.accent)) { Text("Salvar", color = Color.White) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = colors.textMain.copy(0.6f)) } }
     )
 }
 
-fun insertTag(value: TextFieldValue, prefix: String, suffix: String): TextFieldValue {
-    val sel = value.selection
-    val newText = value.text.replaceRange(sel.start, sel.end, "$prefix${value.text.substring(sel.start, sel.end)}$suffix")
-    return TextFieldValue(newText, TextRange(sel.start + prefix.length + (sel.end - sel.start) + suffix.length))
+fun insertTag(textFieldValue: TextFieldValue, startTag: String, endTag: String): TextFieldValue {
+    val text = textFieldValue.text
+    val selection = textFieldValue.selection
+    val newText = text.substring(0, selection.start) + startTag + text.substring(selection.start, selection.end) + endTag + text.substring(selection.end)
+    return textFieldValue.copy(text = newText, selection = TextRange(selection.start + startTag.length, selection.end + startTag.length))
 }
 
 @Composable
 fun FormatAction(icon: androidx.compose.ui.graphics.vector.ImageVector, isSelected: Boolean = false, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(32.dp).clip(RoundedCornerShape(4.dp)).background(if (isSelected) Accent.copy(0.2f) else Color.White.copy(0.05f))) {
-        Icon(icon, null, tint = if (isSelected) Accent else TextMain, modifier = Modifier.size(16.dp))
-    }
+    IconButton(onClick = onClick) { Icon(icon, null, tint = if (isSelected) Color.Cyan else Color.White) }
 }
 
 @Composable
 fun ImageBlock(block: BlockEntity) {
-    val url = remember(block.contentJson) {
-        try { Json.parseToJsonElement(block.contentJson).jsonObject["url"]?.jsonPrimitive?.content ?: "" } catch(e: Exception) { "" }
-    }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(0.1f), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+    val metadata = try { Json.parseToJsonElement(block.contentJson).jsonObject } catch (e: Exception) { null }
+    val url = metadata?.get("url")?.jsonPrimitive?.content ?: ""
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (url.isNotEmpty()) {
-            AsyncImage(
-                model = url, 
-                contentDescription = null, 
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), 
-                contentScale = ContentScale.Fit // Usamos Fit para garantir que a imagem seja vista por inteiro se preferir, ou Crop para manter o design preenchido. 
-                // Mudando para Fit para facilitar a validação de redimensionamento sem "esconder" partes da imagem.
-            )
+            AsyncImage(model = url, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         } else {
-            Icon(Icons.Default.Image, null, tint = TextMain.copy(0.2f), modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.Image, null, tint = Color.Gray, modifier = Modifier.size(32.dp))
         }
     }
 }
 
 @Composable
 fun SidebarContent(
-    q: String, 
-    onQ: (String) -> Unit, 
-    onSearch: () -> Unit, 
-    onImp: () -> Unit, 
-    onExp: () -> Unit, 
-    onClr: () -> Unit, 
-    onGen: () -> Unit,
-    onOrg: () -> Unit,
-    modules: Map<String, Boolean>,
-    onToggleModule: (String, Boolean) -> Unit
+    q: String, onQ: (String) -> Unit, onSearch: () -> Unit, onImp: () -> Unit, onExp: () -> Unit, 
+    onClr: () -> Unit, onGen: () -> Unit, onOrg: () -> Unit, modules: Map<String, Boolean>, 
+    onToggleModule: (String, Boolean) -> Unit, isDarkMode: Boolean, onToggleTheme: () -> Unit, colors: CanvasColors
 ) {
-    Column(Modifier.fillMaxSize().background(BgMenu).padding(24.dp).verticalScroll(rememberScrollState())) {
-        TextField(
-            value = q,
-            onValueChange = onQ,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Buscar no canvas...", color = TextMain.copy(0.3f), fontSize = 14.sp) },
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = Accent, modifier = Modifier.size(20.dp)) },
-            trailingIcon = {
-                if (q.isNotEmpty()) {
-                    IconButton(onClick = { onQ("") }) {
-                        Icon(Icons.Default.Clear, null, tint = TextMain.copy(0.4f), modifier = Modifier.size(18.dp))
-                    }
-                }
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(8.dp),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-            colors = TextFieldDefaults.textFieldColors(
-                textColor = TextMain,
-                backgroundColor = Color.White.copy(0.05f),
-                cursorColor = Accent,
-                focusedIndicatorColor = Accent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent
-            )
-        )
-
+    Column(Modifier.fillMaxSize().background(colors.bgMenu).padding(24.dp).verticalScroll(rememberScrollState())) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Aparência", color = colors.textMain.copy(0.6f), fontSize = 12.sp)
+            IconButton(onClick = onToggleTheme) {
+                Icon(if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode, "Tema", tint = colors.accent)
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        TextField(value = q, onValueChange = onQ, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Buscar...", color = colors.textMain.copy(0.3f)) }, leadingIcon = { Icon(Icons.Default.Search, null, tint = colors.accent) }, colors = TextFieldDefaults.textFieldColors(textColor = colors.textMain, cursorColor = colors.accent, focusedIndicatorColor = colors.accent, backgroundColor = Color.White.copy(0.05f)))
         Spacer(Modifier.height(24.dp))
-
-        SidebarButton("📥 Importar JSON", Accent, onImp)
+        SidebarButton("📥 Importar JSON", colors.accent, onImp)
         Spacer(Modifier.height(8.dp))
-        SidebarButton("📤 Exportar JSON", Accent, onExp)
+        SidebarButton("📤 Exportar JSON", colors.accent, onExp)
         Spacer(Modifier.height(8.dp))
-        SidebarButton("🧩 Auto Organizar", Accent, onOrg)
+        SidebarButton("🧩 Auto Organizar", colors.accent, onOrg)
         Spacer(Modifier.height(8.dp))
-        SidebarButton("🧪 Gerar 50 Blocos (Teste)", Color.Cyan, onGen)
+        SidebarButton("🧪 Gerar Blocos", Color.Cyan, onGen)
         Spacer(Modifier.height(8.dp))
         SidebarButton("💥 Limpar Canvas", Color.Red, onClr)
     }
 }
 
 @Composable
-fun ModuleToggle(label: String, isEnabled: Boolean, onToggle: (Boolean) -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .height(40.dp)
-            .clickable { onToggle(!isEnabled) },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(
-            checked = isEnabled,
-            onCheckedChange = onToggle,
-            colors = CheckboxDefaults.colors(
-                checkedColor = Accent,
-                uncheckedColor = TextMain.copy(0.3f),
-                checkmarkColor = Color.White
-            )
-        )
-        Text(label, color = if (isEnabled) TextMain else TextMain.copy(0.5f), fontSize = 14.sp)
+fun ModuleToggle(label: String, isEnabled: Boolean, onToggle: (Boolean) -> Unit, colors: CanvasColors) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = colors.textMain, fontSize = 14.sp)
+        Switch(checked = isEnabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedThumbColor = colors.accent))
     }
 }
 
 @Composable
-fun SidebarButton(t: String, c: Color, onClick: () -> Unit) {
-    Box(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(8.dp)).background(c.copy(0.1f)).clickable { onClick() }, contentAlignment = Alignment.Center) {
-        Text(t, color = c, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+fun SidebarButton(label: String, color: Color, onClick: () -> Unit) {
+    Button(onClick = onClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(backgroundColor = color.copy(0.1f)), elevation = ButtonDefaults.elevation(0.dp)) {
+        Text(label, color = color, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }

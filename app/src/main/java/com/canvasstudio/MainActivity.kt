@@ -38,9 +38,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var showSplash by remember { mutableStateOf(true) }
+            val isDarkMode by blockViewModel.isDarkMode.collectAsStateWithLifecycle()
 
-            MaterialTheme {
-                Surface {
+            MaterialTheme(colors = if (isDarkMode) darkColors() else lightColors()) {
+                Surface(color = MaterialTheme.colors.background) {
                     if (showSplash) {
                         SplashScreen(onFinished = { showSplash = false })
                     } else {

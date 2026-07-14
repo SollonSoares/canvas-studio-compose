@@ -45,6 +45,13 @@ class BlockViewModel(
     val brandTitle = userPreferencesManager.brandTitleFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Canvas Studio")
 
+    val isDarkMode = userPreferencesManager.darkModeFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun toggleDarkMode() = viewModelScope.launch {
+        userPreferencesManager.setDarkMode(!isDarkMode.value)
+    }
+
     fun setBrandTitle(title: String) = viewModelScope.launch {
         userPreferencesManager.setBrandTitle(title)
     }

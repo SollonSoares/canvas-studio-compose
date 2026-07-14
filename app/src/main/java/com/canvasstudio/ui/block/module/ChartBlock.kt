@@ -20,10 +20,13 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.PI
 
+import com.canvasstudio.ui.block.CanvasColors
+
 @Composable
 fun ChartBlock(
     block: BlockEntity,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    colors: CanvasColors? = null
 ) {
     // FASE 3: Deserialização pura e extração dos atributos de status do contentJson
     val stats = try {
@@ -39,6 +42,9 @@ fun ChartBlock(
     } catch (e: Exception) {
         listOf(0f, 0f, 0f, 0f, 0f, 0f)
     }
+
+    val primaryColor = Color(0xFFFF453A)
+    val guideColor = colors?.canvasGrid ?: Color.Gray
 
     Column(
         modifier = modifier.fillMaxSize().padding(top = 16.dp),
@@ -61,7 +67,7 @@ fun ChartBlock(
                     if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
                 }
                 path.close()
-                drawPath(path, color = Color.Gray.copy(alpha = 0.25f), style = Stroke(width = 1f))
+                drawPath(path, color = guideColor.copy(alpha = 0.25f), style = Stroke(width = 1f))
             }
 
             // Desenho: Eixos
@@ -69,7 +75,7 @@ fun ChartBlock(
                 val angle = (i * PI / 3) - PI / 2
                 val x = center.x + (radius * cos(angle)).toFloat()
                 val y = center.y + (radius * sin(angle)).toFloat()
-                drawLine(color = Color.Gray.copy(alpha = 0.5f), start = center, end = Offset(x, y), strokeWidth = 1f)
+                drawLine(color = guideColor.copy(alpha = 0.5f), start = center, end = Offset(x, y), strokeWidth = 1f)
             }
 
             // Desenho: Polígono de Status Preenchido
@@ -82,8 +88,8 @@ fun ChartBlock(
                 if (i == 0) statPath.moveTo(x, y) else statPath.lineTo(x, y)
             }
             statPath.close()
-            drawPath(statPath, color = Color(0xFFFF453A).copy(alpha = 0.4f), style = Fill)
-            drawPath(statPath, color = Color(0xFFFF453A), style = Stroke(width = 2f))
+            drawPath(statPath, color = primaryColor.copy(alpha = 0.4f), style = Fill)
+            drawPath(statPath, color = primaryColor, style = Stroke(width = 2f))
         }
     }
 }
