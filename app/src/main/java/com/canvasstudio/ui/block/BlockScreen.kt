@@ -34,6 +34,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import androidx.compose.ui.text.input.ImeAction
@@ -161,11 +162,13 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
             )
         },
         floatingActionButton = {
+            val density = LocalDensity.current
             FloatingActionButton(
                 onClick = {
                     // Adiciona o bloco na posição relativa ao centro da visão atual
-                    val spawnX = (-offset.x + 200f) / scale
-                    val spawnY = (-offset.y + 200f) / scale
+                    // Convertendo pixels da câmera para DP para consistência no canvas
+                    val spawnX = ((-offset.x / density.density) + 200f) / scale
+                    val spawnY = ((-offset.y / density.density) + 200f) / scale
                     viewModel.insertBlock(BlockEntity(0, 0, "Novo Bloco", "text", spawnX, spawnY, 220, 180, 
                         "{\"text\":\"**Título**\\nEscreva aqui...\", \"titleSize\": 13, \"titleBold\": true, \"align\": \"left\"}"))
                 },
@@ -185,6 +188,7 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                 onExp = { exportLauncher.launch("canvas_export.json") },
                 onClr = { viewModel.clearCanvas() },
                 onGen = { viewModel.generateTestBlocks(50) },
+                onOrg = { viewModel.autoOrganizeBlocks() },
                 modules = modules,
                 onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) }
             ) 
@@ -367,7 +371,9 @@ fun DraggableBlock(
     var width by remember(key) { mutableIntStateOf(block.width) }
     var height by remember(key) { mutableIntStateOf(block.height) }
 
-    // Sincroniza o estado local caso o bloco mude externamente (ex: via diálogo de edição)
+    val density = LocalDensity.current
+    
+    // Sincroniza o estado local caso o bloco mude externamente (ex: via diálogo de edição ou auto-organização)
     LaunchedEffect(block.posX, block.posY, block.width, block.height) {
         offsetX = block.posX
         offsetY = block.posY
@@ -380,7 +386,12 @@ fun DraggableBlock(
     }
 
     Box(
-        modifier = Modifier.offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }.size(width.dp, height.dp)
+        modifier = Modifier.offset { 
+            IntOffset(
+                (offsetX * density.density).roundToInt(), 
+                (offsetY * density.density).roundToInt()
+            ) 
+        }.size(width.dp, height.dp)
             .background(BgMenu.copy(alpha = 0.95f), RoundedCornerShape(12.dp))
             .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
     ) {
@@ -390,8 +401,9 @@ fun DraggableBlock(
                     detectDragGestures(onDragEnd = { updatedOnMove(offsetX, offsetY) }) { change, drag ->
                         change.consume()
                         val s = updatedScale()
-                        offsetX += drag.x / s
-                        offsetY += drag.y / s
+                        // Conversão de delta pixels para DP
+                        offsetX += drag.x / (s * density.density)
+                        offsetY += drag.y / (s * density.density)
                     }
                 }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(8.dp).background(Accent, CircleShape))
@@ -438,8 +450,8 @@ fun DraggableBlock(
             detectDragGestures(onDragEnd = { updatedOnResize(width, height) }) { change, drag ->
                 change.consume()
                 val s = updatedScale()
-                width = (width + (drag.x / (density * s)).toInt()).coerceAtLeast(100)
-                height = (height + (drag.y / (density * s)).toInt()).coerceAtLeast(80)
+                width = (width + (drag.x / (density.density * s)).toInt()).coerceAtLeast(100)
+                height = (height + (drag.y / (density.density * s)).toInt()).coerceAtLeast(80)
             }
         }) { Canvas(Modifier.fillMaxSize()) { drawLine(Accent.copy(0.5f), Offset(size.width, 0f), Offset(0f, size.height), 2.dp.toPx()) } }
     }
@@ -636,6 +648,7 @@ fun SidebarContent(
     onExp: () -> Unit, 
     onClr: () -> Unit, 
     onGen: () -> Unit,
+    onOrg: () -> Unit,
     modules: Map<String, Boolean>,
     onToggleModule: (String, Boolean) -> Unit
 ) {
@@ -672,6 +685,8 @@ fun SidebarContent(
         SidebarButton("📥 Importar JSON", Accent, onImp)
         Spacer(Modifier.height(8.dp))
         SidebarButton("📤 Exportar JSON", Accent, onExp)
+        Spacer(Modifier.height(8.dp))
+        SidebarButton("🧩 Auto Organizar", Accent, onOrg)
         Spacer(Modifier.height(8.dp))
         SidebarButton("🧪 Gerar 50 Blocos (Teste)", Color.Cyan, onGen)
         Spacer(Modifier.height(8.dp))

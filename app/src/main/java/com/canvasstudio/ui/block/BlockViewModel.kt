@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.*
 
 class BlockViewModel(
@@ -153,6 +154,58 @@ class BlockViewModel(
         blockDao.clearCanvas() 
         searchableCache.clear()
         contentHashCache.clear()
+    }
+
+    fun autoOrganizeBlocks() = viewModelScope.launch {
+        // 1. Buscamos TODOS os blocos do banco para garantir que a organização seja total
+        // e não cause sobreposição com blocos ocultos por filtros.
+        val allBlocks = blockDao.getAllBlocks().first()
+        if (allBlocks.isEmpty()) return@launch
+
+        // 2. Ordenamos por posição para preservar a sequência lógica pretendida pelo usuário
+        val sortedBlocks = allBlocks.sortedWith(compareBy<BlockEntity>({ it.posY }, { it.posX }))
+
+        val padding = 60f
+        val startX = 100f
+        val startY = 100f
+        val maxCanvasWidth = 1600f 
+        
+        var currentX = startX
+        var currentY = startY
+        var currentRowMaxHeight = 0f
+        
+        val updatedBlocks = mutableListOf<BlockEntity>()
+        
+        sortedBlocks.forEach { block ->
+            // 3. Validação de Espaço: Se o bloco + sua largura ultrapassa o limite da "folha",
+            // movemos a "caneta" para o início da próxima linha.
+            if (currentX + block.width > maxCanvasWidth && currentX > startX) {
+                currentX = startX
+                currentY += currentRowMaxHeight + padding
+                currentRowMaxHeight = 0f
+            }
+            
+            // 4. Posicionamento Absoluto Baseado no Relativo:
+            // Colocamos o bloco na posição atual da caneta.
+            updatedBlocks.add(block.copy(
+                posX = currentX,
+                posY = currentY
+            ))
+            
+            // 5. Atualização da Caneta: Movemos o X para o final deste bloco + padding.
+            // O próximo bloco será posicionado EXATAMENTE em relação a este.
+            currentX += block.width.toFloat() + padding
+            
+            // 6. Controle de Colisão Vertical: 
+            // Registramos o bloco mais alto da linha para que a próxima linha comece abaixo dele.
+            if (block.height.toFloat() > currentRowMaxHeight) {
+                currentRowMaxHeight = block.height.toFloat()
+            }
+        }
+
+        // Persistimos as novas coordenadas no banco de dados.
+        blockDao.insertAll(updatedBlocks)
+        _events.emit("Canvas auto-organizado com sucesso!")
     }
 
     fun generateTestBlocks(count: Int) = viewModelScope.launch {
