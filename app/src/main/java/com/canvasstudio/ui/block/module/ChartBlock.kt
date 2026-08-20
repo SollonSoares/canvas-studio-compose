@@ -228,6 +228,7 @@ fun ChartBlockPreview() {
         textMain = Color.Black,
         textSecondary = Color.DarkGray,
         textMuted = Color.Gray,
+        danger = Color(0xFFFF3B30),
         border = Color.LightGray,
         borderSubtle = Color.LightGray.copy(alpha = 0.5f)
     )
