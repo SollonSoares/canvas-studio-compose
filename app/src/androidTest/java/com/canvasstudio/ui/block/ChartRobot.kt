@@ -9,7 +9,7 @@ import androidx.compose.ui.test.junit4.ComposeContentTestRule
 class ChartRobot(private val rule: ComposeContentTestRule) {
 
     fun assertLabelValue(label: String, value: String) {
-        rule.onNodeWithText("$label ($value)").assertIsDisplayed()
+        rule.onNodeWithContentDescription("$label ($value)", substring = true).assertIsDisplayed()
     }
 
     fun assertAverage(expectedAverage: String) {
@@ -18,7 +18,7 @@ class ChartRobot(private val rule: ComposeContentTestRule) {
     }
 
     fun assertLabelExists(label: String) {
-        rule.onNodeWithText(label, substring = true).assertIsDisplayed()
+        rule.onNodeWithContentDescription(label, substring = true).assertIsDisplayed()
     }
 }
 

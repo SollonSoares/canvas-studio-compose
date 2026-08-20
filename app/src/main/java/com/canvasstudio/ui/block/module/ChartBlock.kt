@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,6 +64,13 @@ fun ChartBlock(
     val labels = listOf("NIN", "INT", "CHK", "TAI", "VIG", "GEN")
     val average = if (stats.isNotEmpty()) stats.average().toFloat() else 0f
 
+    val chartDescription = remember(stats, labels) {
+        labels.mapIndexed { i, label ->
+            val formattedVal = if (stats[i] % 1f == 0f) stats[i].toInt().toString() else "%.1f".format(java.util.Locale.US, stats[i])
+            "$label ($formattedVal)"
+        }.joinToString(", ")
+    }
+
     // Escala dinâmica: o teto máximo do radar se adapta automaticamente aos valores inseridos
     val maxStat = stats.maxOrNull()?.coerceAtLeast(1f) ?: 10f
     val tetoSistema = if (maxStat <= 10f) 10f else if (maxStat <= 20f) 20f else if (maxStat <= 50f) 50f else if (maxStat <= 100f) 100f else (ceil(maxStat / 10f) * 10f)
@@ -71,7 +80,10 @@ fun ChartBlock(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .semantics { contentDescription = chartDescription },
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -122,7 +134,7 @@ fun ChartBlock(
                     val lx = center.x + (labelRadius * cos(angle)).toFloat()
                     val ly = center.y + (labelRadius * sin(angle)).toFloat()
                     
-                    val formattedVal = if (stats[i] % 1f == 0f) stats[i].toInt().toString() else "%.1f".format(stats[i])
+                    val formattedVal = if (stats[i] % 1f == 0f) stats[i].toInt().toString() else "%.1f".format(java.util.Locale.US, stats[i])
                     val labelText = "${labels[i]} ($formattedVal)"
                     drawContext.canvas.nativeCanvas.drawText(labelText, lx, ly + 3.dp.toPx(), paint)
                 }
@@ -164,7 +176,7 @@ fun ChartBlock(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = if (average % 1f == 0f) average.toInt().toString() else "%.1f".format(average),
+                text = if (average % 1f == 0f) average.toInt().toString() else "%.1f".format(java.util.Locale.US, average),
                 color = accentColor,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
