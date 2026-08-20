@@ -53,6 +53,23 @@ fun EditBlockDialog(
     var vigor by remember { mutableFloatStateOf(initialContent["vigor"]?.jsonPrimitive?.floatOrNull ?: initialContent["vig"]?.jsonPrimitive?.floatOrNull ?: 4f) }
     var genjutsu by remember { mutableFloatStateOf(initialContent["genjutsu"]?.jsonPrimitive?.floatOrNull ?: initialContent["gen"]?.jsonPrimitive?.floatOrNull ?: 4f) }
 
+    LaunchedEffect(title, type, textContent, imageUrl, ninjutsu, inteligencia, chakra, taijutsu, vigor, genjutsu) {
+        val currentContent = when(type) {
+            "text" -> buildJsonObject { put("text", textContent); put("titleSize", 13); put("align", "left") }
+            "image" -> buildJsonObject { put("url", imageUrl) }
+            "chart" -> buildJsonObject {
+                put("ninjutsu", ninjutsu)
+                put("inteligencia", inteligencia)
+                put("chakra", chakra)
+                put("taijutsu", taijutsu)
+                put("vigor", vigor)
+                put("genjutsu", genjutsu)
+            }
+            else -> initialContent
+        }
+        onLiveUpdate(block.copy(title = title, type = type, contentJson = currentContent.toString()))
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         backgroundColor = colors.bgMenu,
@@ -138,12 +155,18 @@ fun EditBlockDialog(
                         )
                     }
                     "chart" -> {
-                        ChartSlider("Ninjutsu", ninjutsu, { ninjutsu = it }, colors)
-                        ChartSlider("Inteligência", inteligencia, { inteligencia = it }, colors)
-                        ChartSlider("Chakra", chakra, { chakra = it }, colors)
-                        ChartSlider("Taijutsu", taijutsu, { taijutsu = it }, colors)
-                        ChartSlider("Vigor", vigor, { vigor = it }, colors)
-                        ChartSlider("Genjutsu", genjutsu, { genjutsu = it }, colors)
+                        Text(
+                            text = "Valores dos Atributos (Insira qualquer valor):", 
+                            color = colors.textMain.copy(0.7f), 
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+                        ChartValueInput("Ninjutsu", ninjutsu, { ninjutsu = it }, colors)
+                        ChartValueInput("Inteligência", inteligencia, { inteligencia = it }, colors)
+                        ChartValueInput("Chakra", chakra, { chakra = it }, colors)
+                        ChartValueInput("Taijutsu", taijutsu, { taijutsu = it }, colors)
+                        ChartValueInput("Vigor", vigor, { vigor = it }, colors)
+                        ChartValueInput("Genjutsu", genjutsu, { genjutsu = it }, colors)
                     }
                 }
             }
@@ -180,24 +203,98 @@ fun EditBlockDialog(
 }
 
 @Composable
-private fun ChartSlider(label: String, value: Float, onValueChange: (Float) -> Unit, colors: CanvasColors) {
-    Column(Modifier.padding(vertical = 4.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(label, color = colors.textMain, fontSize = 12.sp)
-            Text(
-                text = if (value % 1 == 0f) value.toInt().toString() else "%.1f".format(value),
-                color = colors.accent,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = 0f..10f,
-            steps = 19,
-            colors = SliderDefaults.colors(thumbColor = colors.accent, activeTrackColor = colors.accent)
+private fun ChartValueInput(
+    label: String, 
+    value: Float, 
+    onValueChange: (Float) -> Unit, 
+    colors: CanvasColors
+) {
+    var textValue by remember(value) { 
+        mutableStateOf(if (value % 1f == 0f) value.toInt().toString() else value.toString()) 
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label, 
+            color = colors.textMain, 
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
         )
+        
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            IconButton(
+                onClick = {
+                    val newVal = (value - 1f).coerceAtLeast(0f)
+                    onValueChange(newVal)
+                },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    Icons.Default.Remove,
+                    contentDescription = "Diminuir",
+                    tint = colors.accent,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            OutlinedTextField(
+                value = textValue,
+                onValueChange = { newText ->
+                    textValue = newText
+                    val cleanText = newText.replace(",", ".")
+                    val parsed = cleanText.toFloatOrNull()
+                    if (parsed != null && parsed >= 0f) {
+                        onValueChange(parsed)
+                    } else if (newText.isBlank()) {
+                        onValueChange(0f)
+                    }
+                },
+                modifier = Modifier.width(85.dp),
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                ),
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    color = colors.textMain
+                ),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    textColor = colors.textMain,
+                    cursorColor = colors.accent,
+                    focusedBorderColor = colors.accent,
+                    unfocusedBorderColor = colors.borderSubtle,
+                    backgroundColor = Color.Transparent
+                ),
+                shape = RoundedCornerShape(8.dp)
+            )
+
+            IconButton(
+                onClick = {
+                    val newVal = value + 1f
+                    onValueChange(newVal)
+                },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Aumentar",
+                    tint = colors.accent,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
     }
 }
 
