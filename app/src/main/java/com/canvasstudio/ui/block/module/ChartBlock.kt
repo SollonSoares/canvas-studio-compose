@@ -23,11 +23,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.canvasstudio.data.local.entity.BlockEntity
 import com.canvasstudio.ui.theme.CanvasColors
 import kotlinx.serialization.json.Json
-import kotlin.math.roundToInt
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.math.PI
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -41,51 +41,30 @@ fun ChartBlock(
     val textColor = colors?.textMain ?: Color.Black
     val guideColor = colors?.canvasGrid ?: Color.Gray
 
-    // Extração robusta dos status alinhada com a lógica do Studio Web
+    // Extração dos status com suporte a valores numéricos diretos (sem teto máximo fixo)
     val stats = remember(block.contentJson) {
         try {
             val json = Json.parseToJsonElement(block.contentJson).jsonObject
-            // Tentamos extrair da estrutura "inputs" ou direto da raiz para compatibilidade
             val root = json["inputs"]?.jsonObject ?: json
             listOf(
-                root["ninjutsu"]?.jsonPrimitive?.floatOrNull ?: 0f,
-                root["inteligencia"]?.jsonPrimitive?.floatOrNull ?: 0f,
-                root["chakraMax"]?.jsonPrimitive?.floatOrNull ?: root["chakra"]?.jsonPrimitive?.floatOrNull ?: 6f,
-                root["taijutsu"]?.jsonPrimitive?.floatOrNull ?: 0f,
-                root["vigor"]?.jsonPrimitive?.floatOrNull ?: 0f,
-                root["genjutsu"]?.jsonPrimitive?.floatOrNull ?: 0f
+                root["ninjutsu"]?.jsonPrimitive?.floatOrNull ?: root["nin"]?.jsonPrimitive?.floatOrNull ?: 0f,
+                root["inteligencia"]?.jsonPrimitive?.floatOrNull ?: root["int"]?.jsonPrimitive?.floatOrNull ?: 0f,
+                root["chakra"]?.jsonPrimitive?.floatOrNull ?: root["cha"]?.jsonPrimitive?.floatOrNull ?: root["chakraMax"]?.jsonPrimitive?.floatOrNull ?: 0f,
+                root["taijutsu"]?.jsonPrimitive?.floatOrNull ?: root["tai"]?.jsonPrimitive?.floatOrNull ?: 0f,
+                root["vigor"]?.jsonPrimitive?.floatOrNull ?: root["vig"]?.jsonPrimitive?.floatOrNull ?: 0f,
+                root["genjutsu"]?.jsonPrimitive?.floatOrNull ?: root["gen"]?.jsonPrimitive?.floatOrNull ?: 0f
             )
         } catch (e: Exception) {
-            listOf(0f, 0f, 6f, 0f, 0f, 0f)
+            listOf(0f, 0f, 0f, 0f, 0f, 0f)
         }
-    }
-
-    // Lógica de normalização idêntica ao ChartModule.js (Fórmulas RPG Naruto)
-    val normalizedStats = remember(stats) {
-        val nin = (stats[0] / 10f) + 0.5f
-        val intel = stats[1] + 0.5f
-        val chk = (stats[2] - 6f) / 10f
-        val tai = (stats[3] / 10f) + 0.5f
-        val vig = stats[4] + 0.5f
-        val gen = (stats[5] / 10f) + 0.5f
-
-        val ajustarNota = { nota: Float ->
-            val arredondado = (nota * 2).roundToInt() / 2f
-            arredondado.coerceIn(0.5f, 8.0f)
-        }
-
-        listOf(
-            ajustarNota(nin),
-            ajustarNota(intel),
-            ajustarNota(chk),
-            ajustarNota(tai),
-            ajustarNota(vig),
-            ajustarNota(gen)
-        )
     }
 
     val labels = listOf("NIN", "INT", "CHK", "TAI", "VIG", "GEN")
-    val average = normalizedStats.average().toFloat()
+    val average = if (stats.isNotEmpty()) stats.average().toFloat() else 0f
+
+    // Escala dinâmica: o teto máximo do radar se adapta automaticamente aos valores inseridos
+    val maxStat = stats.maxOrNull()?.coerceAtLeast(1f) ?: 10f
+    val tetoSistema = if (maxStat <= 10f) 10f else if (maxStat <= 20f) 20f else if (maxStat <= 50f) 50f else if (maxStat <= 100f) 100f else (ceil(maxStat / 10f) * 10f)
 
     Column(
         modifier = modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 8.dp),
@@ -98,10 +77,9 @@ fun ChartBlock(
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val center = Offset(size.width / 2, size.height / 2)
                 val radius = (size.minDimension / 2 * 0.65f).coerceAtLeast(10f)
-                val tetoSistema = 8.0f
 
-                // 1. Desenho das Guias Hexagonais (Radar Background)
-                val levels = listOf(2f, 4f, 6f, 8f)
+                // 1. Desenho das Guias Hexagonais (Radar Background proporcional à escala)
+                val levels = listOf(tetoSistema * 0.25f, tetoSistema * 0.5f, tetoSistema * 0.75f, tetoSistema)
                 levels.forEach { level ->
                     val r = (level / tetoSistema) * radius
                     val path = Path()
@@ -119,7 +97,7 @@ fun ChartBlock(
                     )
                 }
 
-                // 2. Eixos Radiais e Labels (Identificadores de Atributos)
+                // 2. Eixos Radiais e Labels (Identificadores e Valores)
                 val paint = Paint().apply {
                     color = textColor.toArgb()
                     textSize = 10.sp.toPx()
@@ -139,12 +117,13 @@ fun ChartBlock(
                         strokeWidth = 1.dp.toPx()
                     )
 
-                    // Posicionamento inteligente das labels NIN, INT, etc.
+                    // Posicionamento das labels NIN, INT, etc. com o valor inserido
                     val labelRadius = radius + 16.dp.toPx()
                     val lx = center.x + (labelRadius * cos(angle)).toFloat()
                     val ly = center.y + (labelRadius * sin(angle)).toFloat()
                     
-                    val labelText = "${labels[i]} (${normalizedStats[i].let { if (it % 1 == 0f) it.toInt() else "%.1f".format(it) }})"
+                    val formattedVal = if (stats[i] % 1f == 0f) stats[i].toInt().toString() else "%.1f".format(stats[i])
+                    val labelText = "${labels[i]} ($formattedVal)"
                     drawContext.canvas.nativeCanvas.drawText(labelText, lx, ly + 3.dp.toPx(), paint)
                 }
 
@@ -152,7 +131,7 @@ fun ChartBlock(
                 val statPath = Path()
                 for (i in 0 until 6) {
                     val angle = (i * PI / 3) - PI / 2
-                    val r = (normalizedStats[i] / tetoSistema) * radius
+                    val r = ((stats[i] / tetoSistema).coerceIn(0f, 1f)) * radius
                     val x = center.x + (r * cos(angle)).toFloat()
                     val y = center.y + (r * sin(angle)).toFloat()
                     if (i == 0) statPath.moveTo(x, y) else statPath.lineTo(x, y)
@@ -172,7 +151,7 @@ fun ChartBlock(
             }
         }
 
-        // 4. Rodapé Informativo (Métrica de Média - Padrão Studio Web)
+        // 4. Rodapé Informativo (Média)
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             horizontalArrangement = Arrangement.Center,
@@ -185,7 +164,7 @@ fun ChartBlock(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "%.1f".format(average),
+                text = if (average % 1f == 0f) average.toInt().toString() else "%.1f".format(average),
                 color = accentColor,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
