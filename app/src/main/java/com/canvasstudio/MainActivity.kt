@@ -26,12 +26,14 @@ import com.canvasstudio.data.local.AppDatabase
 import com.canvasstudio.ui.block.BlockScreen
 import com.canvasstudio.ui.block.BlockViewModel
 import com.canvasstudio.data.local.preferences.UserPreferencesManager
+import com.canvasstudio.data.repository.BlockRepository
+import com.canvasstudio.ui.theme.CanvasStudioTheme
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
-    private val database by lazy { Room.databaseBuilder(applicationContext, AppDatabase::class.java, "canvas_db").build() }
-    private val preferencesManager by lazy { UserPreferencesManager(applicationContext) }
-    private val blockViewModel: BlockViewModel by viewModels { ViewModelFactory(database, preferencesManager) }
+    private val blockViewModel: BlockViewModel by viewModels { 
+        ViewModelFactory((application as CanvasApplication).container.blockRepository, (application as CanvasApplication).container.userPreferencesManager) 
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,7 +42,7 @@ class MainActivity : ComponentActivity() {
             var showSplash by remember { mutableStateOf(true) }
             val isDarkMode by blockViewModel.isDarkMode.collectAsStateWithLifecycle()
 
-            MaterialTheme(colors = if (isDarkMode) darkColors() else lightColors()) {
+            CanvasStudioTheme(darkTheme = isDarkMode) {
                 Surface(color = MaterialTheme.colors.background) {
                     if (showSplash) {
                         SplashScreen(onFinished = { showSplash = false })
@@ -106,11 +108,11 @@ fun SplashScreen(onFinished: () -> Unit) {
 }
 
 class ViewModelFactory(
-    private val database: AppDatabase,
+    private val blockRepository: BlockRepository,
     private val preferencesManager: UserPreferencesManager
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return BlockViewModel(database.blockDao(), preferencesManager) as T
+        return BlockViewModel(blockRepository, preferencesManager) as T
     }
 }

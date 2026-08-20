@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BlockDao {
-    @Query("SELECT * FROM canvas_blocks")
-    fun getAllBlocks(): Flow<List<BlockEntity>>
+    @Query("SELECT * FROM canvas_blocks WHERE projectId = :projectId")
+    fun getBlocksByProject(projectId: Long): Flow<List<BlockEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(block: BlockEntity)
@@ -21,6 +21,6 @@ interface BlockDao {
     @Delete
     suspend fun delete(block: BlockEntity)
 
-    @Query("DELETE FROM canvas_blocks")
-    suspend fun clearCanvas()
+    @Query("DELETE FROM canvas_blocks WHERE projectId = :projectId")
+    suspend fun clearBlocksByProject(projectId: Long)
 }
