@@ -16,7 +16,7 @@ import java.io.IOException
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
 
-class UserPreferencesManager(private val context: Context) {
+open class UserPreferencesManager(private val context: Context? = null) {
 
     private object PreferencesKeys {
         val DARK_MODE_KEY = booleanPreferencesKey("dark_mode_enabled")
@@ -30,90 +30,108 @@ class UserPreferencesManager(private val context: Context) {
         val IS_LOCKED = booleanPreferencesKey("is_locked")
     }
 
-    val isLockedFlow: Flow<Boolean> = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) emit(emptyPreferences()) else throw exception
-        }
-        .map { it[PreferencesKeys.IS_LOCKED] ?: false }
-
-    val gridEnabledFlow: Flow<Boolean> = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) emit(emptyPreferences()) else throw exception
-        }
-        .map { it[PreferencesKeys.GRID_ENABLED_KEY] ?: true }
-
-    val brandTitleFlow: Flow<String> = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) emit(emptyPreferences()) else throw exception
-        }
-        .map { it[PreferencesKeys.BRAND_TITLE] ?: "Canvas Studio" }
-
-    val canvasDimensionsFlow: Flow<Pair<Int, Int>> = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) emit(emptyPreferences()) else throw exception
-        }
-        .map { preferences ->
-            Pair(
-                preferences[PreferencesKeys.CANVAS_WIDTH] ?: 2000,
-                preferences[PreferencesKeys.CANVAS_HEIGHT] ?: 2000
-            )
-        }
-
-    suspend fun setBrandTitle(title: String) {
-        context.dataStore.edit { it[PreferencesKeys.BRAND_TITLE] = title }
+    open val isLockedFlow: Flow<Boolean> by lazy {
+        context?.dataStore?.data
+            ?.catch { exception ->
+                if (exception is IOException) emit(emptyPreferences()) else throw exception
+            }
+            ?.map { it[PreferencesKeys.IS_LOCKED] ?: false }
+            ?: kotlinx.coroutines.flow.flowOf(false)
     }
 
-    suspend fun setCanvasDimensions(width: Int, height: Int) {
-        context.dataStore.edit { preferences ->
+    open val gridEnabledFlow: Flow<Boolean> by lazy {
+        context?.dataStore?.data
+            ?.catch { exception ->
+                if (exception is IOException) emit(emptyPreferences()) else throw exception
+            }
+            ?.map { it[PreferencesKeys.GRID_ENABLED_KEY] ?: true }
+            ?: kotlinx.coroutines.flow.flowOf(true)
+    }
+
+    open val brandTitleFlow: Flow<String> by lazy {
+        context?.dataStore?.data
+            ?.catch { exception ->
+                if (exception is IOException) emit(emptyPreferences()) else throw exception
+            }
+            ?.map { it[PreferencesKeys.BRAND_TITLE] ?: "Canvas Studio" }
+            ?: kotlinx.coroutines.flow.flowOf("Canvas Studio")
+    }
+
+    open val canvasDimensionsFlow: Flow<Pair<Int, Int>> by lazy {
+        context?.dataStore?.data
+            ?.catch { exception ->
+                if (exception is IOException) emit(emptyPreferences()) else throw exception
+            }
+            ?.map { preferences ->
+                Pair(
+                    preferences[PreferencesKeys.CANVAS_WIDTH] ?: 2000,
+                    preferences[PreferencesKeys.CANVAS_HEIGHT] ?: 2000
+                )
+            }
+            ?: kotlinx.coroutines.flow.flowOf(Pair(2000, 2000))
+    }
+
+    open suspend fun setBrandTitle(title: String) {
+        context?.dataStore?.edit { it[PreferencesKeys.BRAND_TITLE] = title }
+    }
+
+    open suspend fun setCanvasDimensions(width: Int, height: Int) {
+        context?.dataStore?.edit { preferences ->
             preferences[PreferencesKeys.CANVAS_WIDTH] = width
             preferences[PreferencesKeys.CANVAS_HEIGHT] = height
         }
     }
 
-    val darkModeFlow: Flow<Boolean> = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
+    open val darkModeFlow: Flow<Boolean> by lazy {
+        context?.dataStore?.data
+            ?.catch { exception ->
+                if (exception is IOException) {
+                    emit(emptyPreferences())
+                } else {
+                    throw exception
+                }
             }
-        }
-        .map { preferences ->
-            preferences[PreferencesKeys.DARK_MODE_KEY] ?: false
-        }
-
-    val modulesStateFlow: Flow<Map<String, Boolean>> = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
+            ?.map { preferences ->
+                preferences[PreferencesKeys.DARK_MODE_KEY] ?: false
             }
-        }
-        .map { preferences ->
-            mapOf(
-                "text" to (preferences[PreferencesKeys.MODULE_TEXT_ENABLED] ?: true),
-                "image" to (preferences[PreferencesKeys.MODULE_IMAGE_ENABLED] ?: true),
-                "chart" to (preferences[PreferencesKeys.MODULE_CHART_ENABLED] ?: true)
-            )
-        }
+            ?: kotlinx.coroutines.flow.flowOf(false)
+    }
 
-    suspend fun setDarkMode(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
+    open val modulesStateFlow: Flow<Map<String, Boolean>> by lazy {
+        context?.dataStore?.data
+            ?.catch { exception ->
+                if (exception is IOException) {
+                    emit(emptyPreferences())
+                } else {
+                    throw exception
+                }
+            }
+            ?.map { preferences ->
+                mapOf(
+                    "text" to (preferences[PreferencesKeys.MODULE_TEXT_ENABLED] ?: true),
+                    "image" to (preferences[PreferencesKeys.MODULE_IMAGE_ENABLED] ?: true),
+                    "chart" to (preferences[PreferencesKeys.MODULE_CHART_ENABLED] ?: true)
+                )
+            }
+            ?: kotlinx.coroutines.flow.flowOf(mapOf("text" to true, "image" to true, "chart" to true))
+    }
+
+    open suspend fun setDarkMode(enabled: Boolean) {
+        context?.dataStore?.edit { preferences ->
             preferences[PreferencesKeys.DARK_MODE_KEY] = enabled
         }
     }
 
-    suspend fun setGridEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[PreferencesKeys.GRID_ENABLED_KEY] = enabled }
+    open suspend fun setGridEnabled(enabled: Boolean) {
+        context?.dataStore?.edit { it[PreferencesKeys.GRID_ENABLED_KEY] = enabled }
     }
 
-    suspend fun setLocked(enabled: Boolean) {
-        context.dataStore.edit { it[PreferencesKeys.IS_LOCKED] = enabled }
+    open suspend fun setLocked(enabled: Boolean) {
+        context?.dataStore?.edit { it[PreferencesKeys.IS_LOCKED] = enabled }
     }
 
-    suspend fun setModuleEnabled(moduleType: String, enabled: Boolean) {
-        context.dataStore.edit { preferences ->
+    open suspend fun setModuleEnabled(moduleType: String, enabled: Boolean) {
+        context?.dataStore?.edit { preferences ->
             when (moduleType) {
                 "text" -> preferences[PreferencesKeys.MODULE_TEXT_ENABLED] = enabled
                 "image" -> preferences[PreferencesKeys.MODULE_IMAGE_ENABLED] = enabled

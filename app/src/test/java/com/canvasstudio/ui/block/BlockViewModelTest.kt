@@ -1,8 +1,8 @@
 package com.canvasstudio.ui.block
 
-import com.canvasstudio.data.local.dao.BlockDao
 import com.canvasstudio.data.local.entity.BlockEntity
 import com.canvasstudio.data.local.preferences.UserPreferencesManager
+import com.canvasstudio.data.repository.BlockRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -19,40 +19,71 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Testes Unitários de Lógica de Negócio e Portabilidade (ViewModel).
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class BlockViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    
-    // Fake DAO
-    private val fakeBlockDao = object : BlockDao {
-        val insertedBlocks = mutableListOf<BlockEntity>()
-        override fun getAllBlocks(): Flow<List<BlockEntity>> = flowOf(emptyList())
-        override suspend fun insert(block: BlockEntity) { insertedBlocks.add(block) }
-        override suspend fun insertAll(blocks: List<BlockEntity>) { insertedBlocks.addAll(blocks) }
-        override suspend fun update(block: BlockEntity) {}
-        override suspend fun delete(block: BlockEntity) {}
-        override suspend fun clearCanvas() {}
+
+    // Fake Repository
+    private class FakeBlockRepository : BlockRepository {
+        val blocks = mutableListOf<BlockEntity>()
+        private val blocksFlow = MutableStateFlow<List<BlockEntity>>(emptyList())
+
+        override fun getBlocksStream(projectId: Long): Flow<List<BlockEntity>> = blocksFlow
+
+        override suspend fun insertBlock(block: BlockEntity) {
+            blocks.add(block)
+            blocksFlow.value = blocks.toList()
+        }
+
+        override suspend fun insertBlocks(newBlocks: List<BlockEntity>) {
+            blocks.addAll(newBlocks)
+            blocksFlow.value = blocks.toList()
+        }
+
+        override suspend fun updateBlock(block: BlockEntity) {
+            val idx = blocks.indexOfFirst { it.id == block.id }
+            if (idx != -1) {
+                blocks[idx] = block
+                blocksFlow.value = blocks.toList()
+            }
+        }
+
+        override suspend fun deleteBlock(block: BlockEntity) {
+            blocks.removeAll { it.id == block.id }
+            blocksFlow.value = blocks.toList()
+        }
+
+        override suspend fun clearCanvas(projectId: Long) {
+            blocks.clear()
+            blocksFlow.value = emptyList()
+        }
+
+        override suspend fun getCachedImage(imgId: String): String? = null
+        override suspend fun saveImageCache(imgId: String, data: String) {}
+        override suspend fun deleteImageCache(imgId: String) {}
     }
 
-    // Fake Preferences
-    private val fakePrefs = object : UserPreferencesManager(null as android.content.Context?) {
-        override val brandTitleFlow = flowOf("Test Studio")
-        override val canvasDimensionsFlow = flowOf(2000 to 2000)
-        override val darkModeFlow = flowOf(true)
-        override val modulesStateFlow = flowOf(mapOf("text" to true, "chart" to true))
+    private class FakePreferences : UserPreferencesManager() {
+        override val brandTitleFlow: Flow<String> = flowOf("Canvas Studio Pro")
+        override val canvasDimensionsFlow: Flow<Pair<Int, Int>> = flowOf(2000 to 2000)
+        override val darkModeFlow: Flow<Boolean> = flowOf(true)
+        override val modulesStateFlow: Flow<Map<String, Boolean>> = flowOf(mapOf("text" to true, "image" to true, "chart" to true))
     }
 
+    private lateinit var repository: FakeBlockRepository
+    private lateinit var preferences: FakePreferences
     private lateinit var viewModel: BlockViewModel
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        // We pass null context to fakePrefs because our overrides avoid using it
-        // However, UserPreferencesManager might call dataStore in init. 
-        // Let's assume we can instantiate it or better, mock it if possible.
-        // Since I can't easily mock classes with constructors that do work without a library,
-        // I will hope this works or use a real mock if I find one.
+        repository = FakeBlockRepository()
+        preferences = FakePreferences()
+        viewModel = BlockViewModel(repository, preferences)
     }
 
     @After
@@ -61,28 +92,60 @@ class BlockViewModelTest {
     }
 
     @Test
-    fun `importFromJson should parse Web format correctly`() = runTest {
+    fun `importFromJson deve importar blocos Web corretamente`() = runTest {
         val webJson = """
         {
+            "metadata": { "brand": "Naruto RPG Sheet" },
             "blocks": {
-                "1": {
-                    "type": "text",
-                    "title": "Nota Web",
+                "block_1": {
+                    "type": "chart",
+                    "title": "Status Ninja",
+                    "top": "100px",
                     "left": "150px",
-                    "top": "200px",
                     "width": "300px",
-                    "height": "100px",
-                    "campos": [
-                        { "html": "Olá <b>Mundo</b>" }
-                    ]
+                    "height": "300px",
+                    "inputs": {
+                        "ninjutsu": 15,
+                        "inteligencia": 20,
+                        "chakraMax": 50,
+                        "taijutsu": 10,
+                        "vigor": 25,
+                        "genjutsu": 5
+                    }
                 }
             }
         }
         """.trimIndent()
 
-        // We need a way to inject dependencies that don't crash on init
-        // Since I can't modify the ViewModel to take interfaces easily now, 
-        // I'll check if I can just run the logic inside parseBlockObject which is private.
-        // Actually, I'll test the ViewModel if it doesn't crash.
+        viewModel.importFromJson(webJson)
+        advanceUntilIdle()
+
+        assertEquals(1, repository.blocks.size)
+        val imported = repository.blocks.first()
+        assertEquals("Status Ninja", imported.title)
+        assertEquals("chart", imported.type)
+        assertEquals(150f, imported.posX)
+        assertEquals(100f, imported.posY)
+    }
+
+    @Test
+    fun `exportToJson deve gerar estrutura compativel com Web`() = runTest {
+        val block = BlockEntity(
+            id = 1,
+            projectId = 0,
+            title = "Anotação",
+            type = "text",
+            posX = 50f,
+            posY = 50f,
+            width = 200,
+            height = 150,
+            contentJson = """{"text": "**Importante**"}"""
+        )
+        repository.insertBlock(block)
+        advanceUntilIdle()
+
+        val jsonExported = viewModel.exportToJson()
+        assertTrue(jsonExported.contains("app_brand_title"))
+        assertTrue(jsonExported.contains("blocks"))
     }
 }
