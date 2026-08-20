@@ -384,7 +384,17 @@ class BlockViewModel(
         return json.encodeToString(JsonObject.serializer(), root)
     }
 
-    fun importFromJson(jsonString: String) = viewModelScope.launch {
+    fun loadDefaultTemplate(context: android.content.Context, clearFirst: Boolean = false) = viewModelScope.launch {
+        try {
+            val jsonString = context.assets.open("default_template.json").bufferedReader().use { it.readText() }
+            importFromJson(jsonString, clearFirst = clearFirst)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            _events.emit("Erro ao carregar ficha padrão: ${e.message}")
+        }
+    }
+
+    fun importFromJson(jsonString: String, clearFirst: Boolean = false) = viewModelScope.launch {
         if (jsonString.isBlank()) {
             _events.emit("JSON vazio")
             return@launch
@@ -427,8 +437,11 @@ class BlockViewModel(
             extractBlocks(jsonElement)
 
             if (newBlocks.isNotEmpty()) {
+                if (clearFirst) {
+                    blockRepository.clearCanvas(_currentProjectId.value)
+                }
                 blockRepository.insertBlocks(newBlocks)
-                _events.emit("${newBlocks.size} blocos importados com sucesso!")
+                _events.emit("${newBlocks.size} blocos carregados com sucesso!")
             } else {
                 _events.emit("Nenhum bloco compatível encontrado no arquivo.")
             }

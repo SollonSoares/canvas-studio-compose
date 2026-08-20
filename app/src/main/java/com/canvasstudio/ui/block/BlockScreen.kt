@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +51,7 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
     val isLocked by viewModel.isLocked.collectAsStateWithLifecycle()
     val canvasDimensions by viewModel.canvasDimensions.collectAsStateWithLifecycle()
     var showSettingsModal by remember { mutableStateOf(false) }
+    var showTemplateDialog by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -204,6 +206,10 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     pdfExportLauncher.launch("${brandTitle.replace(" ", "_")}_export.pdf")
                     scope.launch { scaffoldState.drawerState.close() }
                 },
+                onLoadTemplate = {
+                    showTemplateDialog = true
+                    scope.launch { scaffoldState.drawerState.close() }
+                },
                 colors = colors
             ) 
         }
@@ -323,6 +329,102 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) },
                     onDismiss = { showSettingsModal = false },
                     colors = colors
+                )
+            }
+
+            // Barra Flutuante de Zoom & Centralizar
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 16.dp, bottom = 16.dp),
+                color = colors.bgCard.copy(alpha = 0.95f),
+                shape = RoundedCornerShape(24.dp),
+                elevation = 6.dp,
+                border = BorderStroke(1.dp, colors.borderSubtle)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { scale = (scale / 1.25f).coerceIn(0.15f, 3f) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(Icons.Rounded.Remove, "Zoom Out", tint = colors.textMain, modifier = Modifier.size(16.dp))
+                    }
+                    Text(
+                        text = "${(scale * 100).toInt()}%",
+                        color = colors.textMain,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .clickable { scale = 1f; offset = Offset.Zero }
+                            .padding(horizontal = 6.dp)
+                    )
+                    IconButton(
+                        onClick = { scale = (scale * 1.25f).coerceIn(0.15f, 3f) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(Icons.Rounded.Add, "Zoom In", tint = colors.textMain, modifier = Modifier.size(16.dp))
+                    }
+                    Box(Modifier.height(16.dp).width(1.dp).background(colors.borderSubtle))
+                    IconButton(
+                        onClick = { scale = 1f; offset = Offset.Zero },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(Icons.Rounded.CenterFocusStrong, "Centralizar", tint = colors.accent, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+
+            if (showTemplateDialog) {
+                AlertDialog(
+                    onDismissRequest = { showTemplateDialog = false },
+                    title = { Text("Carregar Ficha RPG (Padrão)", color = colors.textMain, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+                    text = { 
+                        Text(
+                            "Deseja substituir o canvas atual com os 18 blocos da ficha de RPG ou mesclar com os blocos que você já tem?",
+                            color = colors.textSecondary,
+                            fontSize = 13.sp
+                        ) 
+                    },
+                    buttons = {
+                        Column(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    viewModel.loadDefaultTemplate(context, clearFirst = true)
+                                    showTemplateDialog = false
+                                },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = colors.danger),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Substituir Canvas Atual", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                            Button(
+                                onClick = {
+                                    viewModel.loadDefaultTemplate(context, clearFirst = false)
+                                    showTemplateDialog = false
+                                },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = colors.accent),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Mesclar com o Canvas", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                            TextButton(
+                                onClick = { showTemplateDialog = false },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Cancelar", color = colors.textMuted)
+                            }
+                        }
+                    },
+                    backgroundColor = colors.bgCard,
+                    shape = RoundedCornerShape(12.dp)
                 )
             }
         }

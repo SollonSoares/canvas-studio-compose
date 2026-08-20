@@ -1,3 +1,97 @@
+# ==============================================================================
+# Gradle & Build Artifacts
+# ==============================================================================
 .gradle/
-.idea/
+build/
+*/build/
 app/build/
+buildOutputCleanup/
+configuration-cache/
+
+# Android build outputs & binaries
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+.navigation/
+
+# ==============================================================================
+# IDEs & Editors
+# ==============================================================================
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+.shelf/
+*.ids
+
+# Visual Studio Code
+.vscode/
+
+# Eclipse / Other IDEs
+.project
+.classpath
+.cproject
+.settings/
+
+# ==============================================================================
+# Local Configuration, Secrets & Keystores
+# ==============================================================================
+local.properties
+secrets.properties
+signing.properties
+release.properties
+*.keystore
+*.jks
+
+# ==============================================================================
+# Local Automation & Development Scripts
+# ==============================================================================
+scripts/
+
+# ==============================================================================
+# Screenshots, Captures & Dumps (Root / Local)
+# ==============================================================================
+/*.png
+phone_screen.png
+screenshot*.png
+captures/
+*.hprof
+hs_err_pid*
+replay_pid*
+
+# ==============================================================================
+# Logs & Temporary Files
+# ==============================================================================
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# ==============================================================================
+# Operating System Files
+# ==============================================================================
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+.directory
+.fuse_hidden*

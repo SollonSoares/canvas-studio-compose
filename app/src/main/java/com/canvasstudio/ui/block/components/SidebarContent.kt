@@ -46,6 +46,7 @@ fun SidebarContent(
     onAddChartBlock: () -> Unit,
     onAddImageBlock: () -> Unit,
     onExportPdf: () -> Unit,
+    onLoadTemplate: () -> Unit,
     colors: CanvasColors
 ) {
     Column(
@@ -134,9 +135,10 @@ fun SidebarContent(
             SidebarButton("Limpar Tudo", Icons.Rounded.DeleteSweep, colors.danger, isDanger = true, onClick = onClr)
         }
 
-        // 4. PORTABILIDADE
+        // 4. PORTABILIDADE & MODELOS
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            MenuSectionTitle("PORTABILIDADE", colors)
+            MenuSectionTitle("PORTABILIDADE & MODELOS", colors)
+            SidebarButton("Carregar Ficha RPG (Padrão)", Icons.Rounded.Description, colors.accent, onClick = onLoadTemplate)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.weight(1f)) {
                     SidebarButton("JSON Export", Icons.Rounded.FileUpload, colors.textMain, onClick = onExp)

@@ -59,6 +59,10 @@ fun DraggableBlock(
     var offsetY by remember(key) { mutableFloatStateOf(block.posY) }
     var width by remember(key) { mutableIntStateOf(block.width) }
     var height by remember(key) { mutableIntStateOf(block.height) }
+    var rawOffsetX by remember(key) { mutableFloatStateOf(block.posX) }
+    var rawOffsetY by remember(key) { mutableFloatStateOf(block.posY) }
+    var rawWidth by remember(key) { mutableFloatStateOf(block.width.toFloat()) }
+    var rawHeight by remember(key) { mutableFloatStateOf(block.height.toFloat()) }
     var isInteracting by remember { mutableStateOf(false) }
     
     var isEditingTitle by remember { mutableStateOf(false) }
@@ -68,10 +72,16 @@ fun DraggableBlock(
     val density = LocalDensity.current
     
     LaunchedEffect(block.posX, block.posY, block.width, block.height) {
-        offsetX = block.posX
-        offsetY = block.posY
-        width = block.width
-        height = block.height
+        if (!isInteracting) {
+            offsetX = block.posX
+            offsetY = block.posY
+            width = block.width
+            height = block.height
+            rawOffsetX = block.posX
+            rawOffsetY = block.posY
+            rawWidth = block.width.toFloat()
+            rawHeight = block.height.toFloat()
+        }
     }
 
     val metadata = remember(block.contentJson) {
@@ -102,7 +112,11 @@ fun DraggableBlock(
                 Row(Modifier.weight(1f).pointerInput(key, isLocked) {
                     if (isLocked) return@pointerInput
                     detectDragGestures(
-                        onDragStart = { isInteracting = true },
+                        onDragStart = { 
+                            isInteracting = true 
+                            rawOffsetX = offsetX
+                            rawOffsetY = offsetY
+                        },
                         onDragEnd = { 
                             isInteracting = false
                             updatedOnMove(offsetX, offsetY) 
@@ -110,10 +124,12 @@ fun DraggableBlock(
                         onDragCancel = { isInteracting = false }
                     ) { change, drag ->
                         change.consume()
-                        val s = updatedScale()
-                        val snap = 20f
-                        offsetX = ((offsetX + drag.x / (s * density.density)) / snap).roundToInt() * snap
-                        offsetY = ((offsetY + drag.y / (s * density.density)) / snap).roundToInt() * snap
+                        val s = updatedScale().coerceAtLeast(0.1f)
+                        val snap = 10f
+                        rawOffsetX += drag.x / (s * density.density)
+                        rawOffsetY += drag.y / (s * density.density)
+                        offsetX = ((rawOffsetX / snap).roundToInt() * snap).coerceAtLeast(0f)
+                        offsetY = ((rawOffsetY / snap).roundToInt() * snap).coerceAtLeast(0f)
                     }
                 }, verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -284,28 +300,40 @@ fun DraggableBlock(
             }
         }
         if (!isLocked) {
-            Box(Modifier.align(Alignment.BottomEnd).size(24.dp).pointerInput(key) {
-                detectDragGestures(
-                    onDragStart = { isInteracting = true },
-                    onDragEnd = { 
-                        isInteracting = false
-                        updatedOnResize(width, height)
-                    },
-                    onDragCancel = { isInteracting = false }
-                ) { change, drag ->
-                    change.consume()
-                    val s = updatedScale()
-                    val snap = 20
-                    width = ((width + (drag.x / (density.density * s)).toInt()) / snap) * snap
-                    height = ((height + (drag.y / (density.density * s)).toInt()) / snap) * snap
-                    width = width.coerceAtLeast(180)
-                    height = height.coerceAtMost(2000).coerceAtLeast(100)
-                }
-            }) { 
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(36.dp)
+                    .pointerInput(key) {
+                        detectDragGestures(
+                            onDragStart = { 
+                                isInteracting = true 
+                                rawWidth = width.toFloat()
+                                rawHeight = height.toFloat()
+                            },
+                            onDragEnd = { 
+                                isInteracting = false
+                                updatedOnResize(width, height)
+                            },
+                            onDragCancel = { isInteracting = false }
+                        ) { change, drag ->
+                            change.consume()
+                            val s = updatedScale().coerceAtLeast(0.1f)
+                            val snap = 10f
+                            rawWidth += drag.x / (density.density * s)
+                            rawHeight += drag.y / (density.density * s)
+                            val snappedW = ((rawWidth / snap).roundToInt() * snap).roundToInt()
+                            val snappedH = ((rawHeight / snap).roundToInt() * snap).roundToInt()
+                            width = snappedW.coerceIn(120, 2000)
+                            height = snappedH.coerceIn(80, 2000)
+                        }
+                    }
+            ) { 
                 Box(
                     Modifier
-                        .align(Alignment.Center)
-                        .size(12.dp)
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 6.dp, end = 6.dp)
+                        .size(14.dp)
                         .background(colors.accent, CircleShape)
                         .border(2.dp, colors.bgMain, CircleShape)
                 )
