@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.canvasstudio.data.local.entity.BlockEntity
 import com.canvasstudio.ui.block.components.*
 import com.canvasstudio.ui.block.dialogs.EditBlockDialog
+import com.canvasstudio.ui.block.utils.PdfExporter
 import com.canvasstudio.ui.theme.CanvasTheme
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
@@ -88,6 +89,29 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
         }
     }
 
+    val pdfExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                if (uiState is BlockUiState.Success) {
+                    val blocks = uiState.blocks
+                    val (w, h) = canvasDimensions
+                    context.contentResolver.openOutputStream(it)?.use { outputStream ->
+                        PdfExporter.exportCanvasToPdf(context, blocks, w, h, outputStream)
+                    }
+                    scope.launch {
+                        scaffoldState.snackbarHostState.showSnackbar("PDF exportado com sucesso!")
+                    }
+                }
+            } catch (e: Exception) {
+                scope.launch {
+                    scaffoldState.snackbarHostState.showSnackbar("Erro ao exportar PDF: ${e.message}")
+                }
+            }
+        }
+    }
+
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val transformState = rememberTransformableState { zoomChange, offsetChange, _ ->
@@ -130,6 +154,7 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
         },
         drawerContent = { 
             val modules by viewModel.modulesState.collectAsState()
+            val density = LocalDensity.current
             SidebarContent(
                 q = searchQuery, 
                 onQ = { viewModel.setSearchQuery(it) }, 
@@ -152,6 +177,31 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                 onToggleLock = { viewModel.toggleLock() },
                 onShowSettings = { 
                     showSettingsModal = true
+                    scope.launch { scaffoldState.drawerState.close() }
+                },
+                onAddTextBlock = {
+                    val spawnX = ((-offset.x / density.density) + 100f) / scale
+                    val spawnY = ((-offset.y / density.density) + 100f) / scale
+                    viewModel.insertBlock(BlockEntity(0, 0, "Novo Bloco", "text", spawnX, spawnY, 220, 180, 
+                        "{\"text\":\"**Título**\\nEscreva aqui...\", \"titleSize\": 13, \"align\": \"left\"}"))
+                    scope.launch { scaffoldState.drawerState.close() }
+                },
+                onAddChartBlock = {
+                    val spawnX = ((-offset.x / density.density) + 100f) / scale
+                    val spawnY = ((-offset.y / density.density) + 100f) / scale
+                    viewModel.insertBlock(BlockEntity(0, 0, "Radar Chart", "chart", spawnX, spawnY, 300, 300, 
+                        "{\"ninjutsu\":5, \"inteligencia\":5, \"chakra\":5, \"taijutsu\":5, \"vigor\":5, \"genjutsu\":5}"))
+                    scope.launch { scaffoldState.drawerState.close() }
+                },
+                onAddImageBlock = {
+                    val spawnX = ((-offset.x / density.density) + 100f) / scale
+                    val spawnY = ((-offset.y / density.density) + 100f) / scale
+                    viewModel.insertBlock(BlockEntity(0, 0, "Imagem", "image", spawnX, spawnY, 250, 250, 
+                        "{\"url\":\"\"}"))
+                    scope.launch { scaffoldState.drawerState.close() }
+                },
+                onExportPdf = {
+                    pdfExportLauncher.launch("${brandTitle.replace(" ", "_")}_export.pdf")
                     scope.launch { scaffoldState.drawerState.close() }
                 },
                 colors = colors

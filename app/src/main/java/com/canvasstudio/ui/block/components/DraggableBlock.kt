@@ -25,6 +25,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.canvasstudio.data.local.entity.BlockEntity
@@ -51,6 +60,10 @@ fun DraggableBlock(
     var width by remember(key) { mutableIntStateOf(block.width) }
     var height by remember(key) { mutableIntStateOf(block.height) }
     var isInteracting by remember { mutableStateOf(false) }
+    
+    var isEditingTitle by remember { mutableStateOf(false) }
+    var tempTitle by remember(block.title) { mutableStateOf(block.title) }
+    val focusRequester = remember { FocusRequester() }
 
     val density = LocalDensity.current
     
@@ -110,14 +123,57 @@ fun DraggableBlock(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = block.title, 
-                        color = colors.textMain, 
-                        fontSize = (metadata?.get("titleSize")?.jsonPrimitive?.intOrNull ?: 12).sp, 
-                        fontWeight = FontWeight.SemiBold, 
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    
+                    if (isEditingTitle) {
+                        BasicTextField(
+                            value = tempTitle,
+                            onValueChange = { tempTitle = it },
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { 
+                                    if (!it.isFocused && isEditingTitle) {
+                                        isEditingTitle = false
+                                        if (tempTitle != block.title) {
+                                            viewModel.updateBlock(block.copy(title = tempTitle))
+                                        }
+                                    }
+                                },
+                            textStyle = TextStyle(
+                                color = colors.textMain,
+                                fontSize = (metadata?.get("titleSize")?.jsonPrimitive?.intOrNull ?: 12).sp,
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            cursorBrush = SolidColor(colors.accent),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    isEditingTitle = false
+                                    if (tempTitle != block.title) {
+                                        viewModel.updateBlock(block.copy(title = tempTitle))
+                                    }
+                                }
+                            )
+                        )
+                        LaunchedEffect(Unit) {
+                            focusRequester.requestFocus()
+                        }
+                    } else {
+                        Text(
+                            text = block.title, 
+                            color = colors.textMain, 
+                            fontSize = (metadata?.get("titleSize")?.jsonPrimitive?.intOrNull ?: 12).sp, 
+                            fontWeight = FontWeight.SemiBold, 
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.clickable {
+                                if (!isLocked) {
+                                    isEditingTitle = true
+                                }
+                            }
+                        )
+                    }
                 }
                 IconButton(onClick = { if (!isLocked) onEdit() }, enabled = !isLocked, modifier = Modifier.size(24.dp)) { 
                     Icon(Icons.Default.Edit, null, tint = if(isLocked) colors.textMuted else colors.textMain.copy(0.4f), modifier = Modifier.size(14.dp)) 

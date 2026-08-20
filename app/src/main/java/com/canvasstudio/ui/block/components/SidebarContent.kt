@@ -41,7 +41,11 @@ fun SidebarContent(
     onToggleGrid: () -> Unit,
     isLocked: Boolean, 
     onToggleLock: () -> Unit,
-    onShowSettings: () -> Unit, 
+    onShowSettings: () -> Unit,
+    onAddTextBlock: () -> Unit,
+    onAddChartBlock: () -> Unit,
+    onAddImageBlock: () -> Unit,
+    onExportPdf: () -> Unit,
     colors: CanvasColors
 ) {
     Column(
@@ -93,7 +97,7 @@ fun SidebarContent(
             }
         }
 
-        // 1. FILTRO (Search)
+        // 1. FILTRO
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             MenuSectionTitle("FILTRO", colors)
             BasicTextField(
@@ -115,17 +119,17 @@ fun SidebarContent(
             )
         }
 
-        // 2. CRIAR ELEMENTOS (Create)
+        // 2. CRIAR (Strict Web Alignment)
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            MenuSectionTitle("CRIAR ELEMENTOS", colors)
-            // Aqui entram os botões de criar que serão adicionados em seguida
-            SidebarButton("Novo Bloco de Texto", Icons.Rounded.TextFields, colors.textMain, onClick = { /* TODO */ })
-            SidebarButton("Novo Gráfico", Icons.Rounded.BarChart, colors.textMain, onClick = { /* TODO */ })
+            MenuSectionTitle("CRIAR", colors)
+            SidebarButton("Novo Bloco de Texto", Icons.Rounded.TextFields, colors.textMain, onClick = onAddTextBlock)
+            SidebarButton("Novo Gráfico Radar", Icons.Rounded.BarChart, colors.textMain, onClick = onAddChartBlock)
+            SidebarButton("Inserir Imagem", Icons.Rounded.Image, colors.textMain, onClick = onAddImageBlock)
         }
 
-        // 3. ORGANIZAÇÃO & PALCO
+        // 3. ORGANIZAÇÃO
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            MenuSectionTitle("ORGANIZAÇÃO & PALCO", colors)
+            MenuSectionTitle("ORGANIZAÇÃO", colors)
             SidebarButton("Auto Organizar", Icons.Rounded.AutoAwesome, colors.textMain, onClick = onOrg)
             SidebarButton("Limpar Tudo", Icons.Rounded.DeleteSweep, colors.danger, isDanger = true, onClick = onClr)
         }
@@ -135,12 +139,13 @@ fun SidebarContent(
             MenuSectionTitle("PORTABILIDADE", colors)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.weight(1f)) {
-                    SidebarButton("Exportar", Icons.Rounded.FileUpload, colors.textMain, onClick = onExp)
+                    SidebarButton("JSON Export", Icons.Rounded.FileUpload, colors.textMain, onClick = onExp)
                 }
                 Box(Modifier.weight(1f)) {
-                    SidebarButton("Importar", Icons.Rounded.FileDownload, colors.textMain, onClick = onImp)
+                    SidebarButton("JSON Import", Icons.Rounded.FileDownload, colors.textMain, onClick = onImp)
                 }
             }
+            SidebarButton("Exportar PDF (Native)", Icons.Rounded.PictureAsPdf, colors.textMain, onClick = onExportPdf)
         }
 
         // Preferências & Footer
