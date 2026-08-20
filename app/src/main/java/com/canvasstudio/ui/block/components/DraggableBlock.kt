@@ -192,11 +192,11 @@ fun DraggableBlock(
                     }
                 }
                 IconButton(onClick = { if (!isLocked) onEdit() }, enabled = !isLocked, modifier = Modifier.size(24.dp)) { 
-                    Icon(Icons.Default.Edit, null, tint = if(isLocked) colors.textMuted else colors.textMain.copy(0.4f), modifier = Modifier.size(14.dp)) 
+                    Icon(Icons.Default.Edit, "Editar Bloco", tint = if(isLocked) colors.textMuted else colors.textMain.copy(0.4f), modifier = Modifier.size(14.dp)) 
                 }
                 Spacer(Modifier.width(4.dp))
                 IconButton(onClick = { if (!isLocked) onDelete() }, enabled = !isLocked, modifier = Modifier.size(24.dp)) { 
-                    Icon(Icons.Default.Close, null, tint = if(isLocked) colors.textMuted else colors.textMain.copy(0.4f), modifier = Modifier.size(14.dp)) 
+                    Icon(Icons.Default.Close, "Excluir Bloco", tint = if(isLocked) colors.textMuted else colors.textMain.copy(0.4f), modifier = Modifier.size(14.dp)) 
                 }
             }
             Box(Modifier.weight(1f).padding(horizontal = 4.dp).clickable(enabled = !isLocked) { onEdit() }) {

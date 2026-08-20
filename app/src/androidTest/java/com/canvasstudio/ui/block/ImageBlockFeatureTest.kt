@@ -1,18 +1,16 @@
 package com.canvasstudio.ui.block
 
-import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.canvasstudio.data.local.entity.BlockEntity
-import com.canvasstudio.ui.block.components.DraggableBlock
-import com.canvasstudio.ui.theme.CanvasColors
-import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.canvasstudio.ui.theme.CanvasStudioTheme
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Bateria completa de testes funcionais e não funcionais para o Bloco de Imagem.
+ * Bateria completa de testes de fluxo negocial ponta a ponta (E2E) para o Bloco de Imagem.
  */
 @RunWith(AndroidJUnit4::class)
 class ImageBlockFeatureTest {
@@ -20,84 +18,72 @@ class ImageBlockFeatureTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val testColors = CanvasColors(
-        bgMain = Color.White,
-        bgMenu = Color(0xFFF5F5F7),
-        bgCard = Color.White,
-        bgInput = Color.LightGray.copy(alpha = 0.1f),
-        bgButton = Color.LightGray.copy(alpha = 0.2f),
-        bgButtonHover = Color.LightGray.copy(alpha = 0.3f),
-        accent = Color(0xFF0071E3),
-        canvasGrid = Color.LightGray,
-        textMain = Color.Black,
-        textSecondary = Color.DarkGray,
-        textMuted = Color.Gray,
-        danger = Color(0xFFFF3B30),
-        border = Color.LightGray,
-        borderSubtle = Color.LightGray.copy(alpha = 0.5f)
-    )
+    private lateinit var repository: InMemoryBlockRepository
+    private lateinit var preferences: InMemoryPreferencesManager
+    private lateinit var viewModel: BlockViewModel
 
-    // =========================================================================
-    // CENÁRIOS FUNCIONAIS
-    // =========================================================================
+    @Before
+    fun setup() {
+        repository = InMemoryBlockRepository()
+        preferences = InMemoryPreferencesManager()
+        viewModel = BlockViewModel(repository, preferences)
+    }
 
-    @Test
-    fun cenario01_renderizacaoBlocoImagemComUrlValida() {
-        val imageBlock = BlockEntity(
-            id = 20,
-            projectId = 1,
-            title = "Foto do Personagem",
-            type = "image",
-            posX = 100f,
-            posY = 100f,
-            width = 250,
-            height = 250,
-            contentJson = """{"url": "https://example.com/ninja.png"}"""
-        )
-
+    private fun launchCanvas() {
         composeTestRule.setContent {
-            com.canvasstudio.ui.block.dialogs.EditBlockDialog(
-                block = imageBlock,
-                onDismiss = {},
-                onConfirm = {},
-                onLiveUpdate = {},
-                colors = testColors
-            )
+            CanvasStudioTheme(darkTheme = false) {
+                val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
+                BlockScreen(
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    onBack = {}
+                )
+            }
         }
-
-        composeTestRule.onNodeWithText("Foto do Personagem").assertIsDisplayed()
-        composeTestRule.onNodeWithText("https://example.com/ninja.png").assertIsDisplayed()
+        Thread.sleep(1500L)
     }
 
     // =========================================================================
-    // CENÁRIOS NÃO FUNCIONAIS
+    // CENÁRIOS DE FLUXO NEGOCIAL COMPLETO
     // =========================================================================
 
     @Test
-    fun cenario02_estadoVazioUrlAusente() {
-        val emptyImageBlock = BlockEntity(
-            id = 21,
-            projectId = 1,
-            title = "Imagem Sem URL",
-            type = "image",
-            posX = 100f,
-            posY = 100f,
-            width = 250,
-            height = 250,
-            contentJson = """{"url": ""}"""
-        )
+    fun cenario01_fluxoCompletoCriarEConfigurarBlocoDeImagem() {
+        launchCanvas()
 
-        composeTestRule.setContent {
-            com.canvasstudio.ui.block.dialogs.EditBlockDialog(
-                block = emptyImageBlock,
-                onDismiss = {},
-                onConfirm = {},
-                onLiveUpdate = {},
-                colors = testColors
-            )
+        // 1. Cria o bloco de imagem via menu lateral
+        canvasStudioRobot(composeTestRule) {
+            openSidebar()
+            addImageBlock()
+            assertBlockWithTitle("Imagem")
+            // 2. Abre a edição no Canvas
+            clickEditBlock()
         }
 
-        composeTestRule.onNodeWithText("Imagem Sem URL").assertIsDisplayed()
-        composeTestRule.onNodeWithText("URL da imagem").assertIsDisplayed()
+        // 3. Altera o título e adiciona uma URL válida no modal
+        editBlockDialogRobot(composeTestRule) {
+            assertDialogTitle("Editar Bloco")
+            enterTitle("Avatar do Personagem")
+            enterImageUrl("https://example.com/naruto.png")
+            clickSave()
+        }
+
+        // 4. Valida que o bloco atualizado aparece no Canvas
+        canvasStudioRobot(composeTestRule) {
+            assertBlockWithTitle("Avatar do Personagem")
+        }
+    }
+
+    @Test
+    fun cenario02_fluxoCompletoExclusaoDeBlocoDeImagem() {
+        launchCanvas()
+
+        canvasStudioRobot(composeTestRule) {
+            openSidebar()
+            addImageBlock()
+            assertBlockWithTitle("Imagem")
+            clickDeleteBlock()
+            assertBlockDoesNotExist("Imagem")
+        }
     }
 }

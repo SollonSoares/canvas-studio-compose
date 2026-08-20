@@ -51,7 +51,6 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
     val isLocked by viewModel.isLocked.collectAsStateWithLifecycle()
     val canvasDimensions by viewModel.canvasDimensions.collectAsStateWithLifecycle()
     var showSettingsModal by remember { mutableStateOf(false) }
-    var showTemplateDialog by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -206,10 +205,6 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     pdfExportLauncher.launch("${brandTitle.replace(" ", "_")}_export.pdf")
                     scope.launch { scaffoldState.drawerState.close() }
                 },
-                onLoadTemplate = {
-                    showTemplateDialog = true
-                    scope.launch { scaffoldState.drawerState.close() }
-                },
                 colors = colors
             ) 
         }
@@ -297,7 +292,7 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                                 Spacer(Modifier.width(8.dp))
                                 Text("Filtrando por: \"$appliedQuery\"", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 IconButton(onClick = { viewModel.setSearchQuery(""); viewModel.applySearch() }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.Close, "Limpar Busca", tint = Color.White, modifier = Modifier.size(14.dp))
                                 }
                             }
                         }
@@ -375,57 +370,6 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                         Icon(Icons.Rounded.CenterFocusStrong, "Centralizar", tint = colors.accent, modifier = Modifier.size(16.dp))
                     }
                 }
-            }
-
-            if (showTemplateDialog) {
-                AlertDialog(
-                    onDismissRequest = { showTemplateDialog = false },
-                    title = { Text("Carregar Ficha RPG (Padrão)", color = colors.textMain, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
-                    text = { 
-                        Text(
-                            "Deseja substituir o canvas atual com os 18 blocos da ficha de RPG ou mesclar com os blocos que você já tem?",
-                            color = colors.textSecondary,
-                            fontSize = 13.sp
-                        ) 
-                    },
-                    buttons = {
-                        Column(
-                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    viewModel.loadDefaultTemplate(context, clearFirst = true)
-                                    showTemplateDialog = false
-                                },
-                                colors = ButtonDefaults.buttonColors(backgroundColor = colors.danger),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Substituir Canvas Atual", color = Color.White, fontWeight = FontWeight.Bold)
-                            }
-                            Button(
-                                onClick = {
-                                    viewModel.loadDefaultTemplate(context, clearFirst = false)
-                                    showTemplateDialog = false
-                                },
-                                colors = ButtonDefaults.buttonColors(backgroundColor = colors.accent),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Mesclar com o Canvas", color = Color.White, fontWeight = FontWeight.Bold)
-                            }
-                            TextButton(
-                                onClick = { showTemplateDialog = false },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Cancelar", color = colors.textMuted)
-                            }
-                        }
-                    },
-                    backgroundColor = colors.bgCard,
-                    shape = RoundedCornerShape(12.dp)
-                )
             }
         }
     }

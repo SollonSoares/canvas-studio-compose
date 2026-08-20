@@ -12,6 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -241,7 +243,7 @@ private fun ChartValueInput(
             ) {
                 Icon(
                     Icons.Default.Remove,
-                    contentDescription = "Diminuir",
+                    contentDescription = "Diminuir $label",
                     tint = colors.accent,
                     modifier = Modifier.size(18.dp)
                 )
@@ -259,7 +261,9 @@ private fun ChartValueInput(
                         onValueChange(0f)
                     }
                 },
-                modifier = Modifier.width(85.dp),
+                modifier = Modifier
+                    .width(85.dp)
+                    .semantics { contentDescription = "Campo $label" },
                 singleLine = true,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                     keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
@@ -289,7 +293,7 @@ private fun ChartValueInput(
             ) {
                 Icon(
                     Icons.Default.Add,
-                    contentDescription = "Aumentar",
+                    contentDescription = "Aumentar $label",
                     tint = colors.accent,
                     modifier = Modifier.size(18.dp)
                 )

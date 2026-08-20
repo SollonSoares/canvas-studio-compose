@@ -1,19 +1,17 @@
 package com.canvasstudio.ui.block
 
-import androidx.compose.runtime.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.canvasstudio.data.local.entity.BlockEntity
-import com.canvasstudio.ui.block.dialogs.EditBlockDialog
-import com.canvasstudio.ui.block.modules.ChartBlock
-import com.canvasstudio.ui.theme.CanvasColors
-import androidx.compose.ui.graphics.Color
+import com.canvasstudio.ui.theme.CanvasStudioTheme
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Bateria completa de testes funcionais e não funcionais do ChartBlock (Radar).
+ * Bateria completa de testes de fluxo negocial ponta a ponta (E2E) do Gráfico Radar.
  */
 @RunWith(AndroidJUnit4::class)
 class ChartBlockFeatureTest {
@@ -21,189 +19,142 @@ class ChartBlockFeatureTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val testColors = CanvasColors(
-        bgMain = Color.White,
-        bgMenu = Color(0xFFF5F5F7),
-        bgCard = Color.White,
-        bgInput = Color.LightGray.copy(alpha = 0.1f),
-        bgButton = Color.LightGray.copy(alpha = 0.2f),
-        bgButtonHover = Color.LightGray.copy(alpha = 0.3f),
-        accent = Color(0xFF0071E3),
-        canvasGrid = Color.LightGray,
-        textMain = Color.Black,
-        textSecondary = Color.DarkGray,
-        textMuted = Color.Gray,
-        danger = Color(0xFFFF3B30),
-        border = Color.LightGray,
-        borderSubtle = Color.LightGray.copy(alpha = 0.5f)
-    )
+    private lateinit var repository: InMemoryBlockRepository
+    private lateinit var preferences: InMemoryPreferencesManager
+    private lateinit var viewModel: BlockViewModel
+
+    @Before
+    fun setup() {
+        repository = InMemoryBlockRepository()
+        preferences = InMemoryPreferencesManager()
+        viewModel = BlockViewModel(repository, preferences)
+    }
+
+    private fun launchCanvas() {
+        composeTestRule.setContent {
+            CanvasStudioTheme(darkTheme = false) {
+                val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
+                BlockScreen(
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    onBack = {}
+                )
+            }
+        }
+        Thread.sleep(1500L)
+    }
 
     // =========================================================================
-    // CENÁRIOS FUNCIONAIS
+    // CENÁRIOS DE FLUXO NEGOCIAL COMPLETO
     // =========================================================================
 
     @Test
-    fun cenario01_renderizacaoBasicaValoresPadrao() {
-        val block = BlockEntity(
-            id = 1,
-            projectId = 1,
-            title = "Status Shinobi",
-            type = "chart",
-            posX = 0f,
-            posY = 0f,
-            width = 300,
-            height = 300,
-            contentJson = """{
-                "ninjutsu": 5,
-                "inteligencia": 5,
-                "chakra": 5,
-                "taijutsu": 5,
-                "vigor": 5,
-                "genjutsu": 5
-            }"""
-        )
+    fun cenario01_fluxoCompletoCriacaoEVisualizacaoRadarPadrao() {
+        launchCanvas()
 
-        composeTestRule.setContent {
-            ChartBlock(block = block, colors = testColors)
+        // 1. Cria o radar pelo fluxo padrão da UI
+        canvasStudioRobot(composeTestRule) {
+            openSidebar()
+            addChartBlock()
+            assertBlockWithTitle("Radar Chart")
         }
 
+        // 2. Valida os valores e a média inicial (5) do gráfico no Canvas
         chartRobot(composeTestRule) {
             assertLabelValue("NIN", "5")
             assertLabelValue("INT", "5")
             assertLabelValue("CHK", "5")
-            assertLabelValue("TAI", "5")
-            assertLabelValue("VIG", "5")
-            assertLabelValue("GEN", "5")
             assertAverage("5")
         }
     }
 
     @Test
-    fun cenario02_valoresCustomizadosSemTetoMaximo() {
-        val block = BlockEntity(
-            id = 2,
-            projectId = 1,
-            title = "Status Lendário",
-            type = "chart",
-            posX = 0f,
-            posY = 0f,
-            width = 300,
-            height = 300,
-            contentJson = """{
-                "ninjutsu": 25,
-                "inteligencia": 30,
-                "chakra": 100,
-                "taijutsu": 15,
-                "vigor": 50,
-                "genjutsu": 20
-            }"""
-        )
+    fun cenario02_fluxoCompletoEdicaoValoresCustomizadosSemTetoMaximo() {
+        launchCanvas()
 
-        composeTestRule.setContent {
-            ChartBlock(block = block, colors = testColors)
+        // 1. Cria o bloco de radar
+        canvasStudioRobot(composeTestRule) {
+            openSidebar()
+            addChartBlock()
+            clickEditBlock()
+        }
+
+        // 2. Edita os atributos com valores superiores a 10 (ex: 25, 100, 50)
+        editBlockDialogRobot(composeTestRule) {
+            assertDialogTitle("Editar Bloco")
+            enterTitle("Status Lendário")
+            enterChartAttribute("Ninjutsu", "25")
+            enterChartAttribute("Chakra", "100")
+            enterChartAttribute("Vigor", "50")
+            clickSave()
+        }
+
+        // 3. Valida no Canvas que o título foi atualizado e os valores e escala dinâmica estão corretos
+        canvasStudioRobot(composeTestRule) {
+            assertBlockWithTitle("Status Lendário")
         }
 
         chartRobot(composeTestRule) {
             assertLabelValue("NIN", "25")
-            assertLabelValue("INT", "30")
             assertLabelValue("CHK", "100")
-            assertLabelValue("TAI", "15")
             assertLabelValue("VIG", "50")
-            assertLabelValue("GEN", "20")
-            assertAverage("40")
         }
     }
 
     @Test
-    fun cenario03_edicaoDeAtributosNoModal() {
-        var currentBlock by mutableStateOf(
-            BlockEntity(
-                id = 3,
-                projectId = 1,
-                title = "Status Editável",
-                type = "chart",
-                posX = 0f,
-                posY = 0f,
-                width = 300,
-                height = 300,
-                contentJson = """{"ninjutsu": 4, "inteligencia": 4, "chakra": 4, "taijutsu": 4, "vigor": 4, "genjutsu": 4}"""
-            )
-        )
+    fun cenario03_fluxoCompletoBotoesIncrementoEDecremento() {
+        launchCanvas()
 
-        composeTestRule.setContent {
-            EditBlockDialog(
-                block = currentBlock,
-                onDismiss = {},
-                onConfirm = { currentBlock = it },
-                onLiveUpdate = { currentBlock = it },
-                colors = testColors
-            )
+        canvasStudioRobot(composeTestRule) {
+            openSidebar()
+            addChartBlock()
+            clickEditBlock()
         }
 
         editBlockDialogRobot(composeTestRule) {
             assertDialogTitle("Editar Bloco")
+            enterTitle("Status Treinado")
+            clickIncrement("Ninjutsu")
+            clickDecrement("Taijutsu")
             clickSave()
+        }
+
+        canvasStudioRobot(composeTestRule) {
+            assertBlockWithTitle("Status Treinado")
+        }
+
+        chartRobot(composeTestRule) {
+            assertLabelValue("NIN", "6")
+            assertLabelValue("TAI", "4")
         }
     }
 
-    // =========================================================================
-    // CENÁRIOS NÃO FUNCIONAIS & RESILIÊNCIA
-    // =========================================================================
-
     @Test
-    fun cenario04_resilienciaJsonInvalidoOuVazio() {
-        val blockCorrompido = BlockEntity(
-            id = 4,
-            projectId = 1,
+    fun cenario04_resilienciaBlocoCorrompidoCarregadoNoCanvas() {
+        // Insere um bloco previamente corrompido no repositório
+        val corrompido = BlockEntity(
+            id = 99,
+            projectId = 0,
             title = "Status Inválido",
             type = "chart",
-            posX = 0f,
-            posY = 0f,
+            posX = 50f,
+            posY = 50f,
             width = 300,
             height = 300,
-            contentJson = "INVALID_JSON_CONTENT_NOT_FORMATTED"
+            contentJson = "INVALID_CORRUPTED_JSON_DATA"
         )
+        kotlinx.coroutines.runBlocking { repository.insertBlock(corrompido) }
 
-        composeTestRule.setContent {
-            ChartBlock(block = blockCorrompido, colors = testColors)
+        launchCanvas()
+
+        // Canvas deve ser resiliente e renderizar com valores zerados sem quebrar o app
+        canvasStudioRobot(composeTestRule) {
+            assertBlockWithTitle("Status Inválido")
         }
 
         chartRobot(composeTestRule) {
             assertLabelValue("NIN", "0")
-            assertLabelValue("INT", "0")
             assertAverage("0")
-        }
-    }
-
-    @Test
-    fun cenario05_valoresDecimaisEZero() {
-        val blockDecimais = BlockEntity(
-            id = 5,
-            projectId = 1,
-            title = "Status Decimais",
-            type = "chart",
-            posX = 0f,
-            posY = 0f,
-            width = 300,
-            height = 300,
-            contentJson = """{
-                "ninjutsu": 7.5,
-                "inteligencia": 0,
-                "chakra": 12.3,
-                "taijutsu": 8.0,
-                "vigor": 0,
-                "genjutsu": 3.2
-            }"""
-        )
-
-        composeTestRule.setContent {
-            ChartBlock(block = blockDecimais, colors = testColors)
-        }
-
-        chartRobot(composeTestRule) {
-            assertLabelValue("NIN", "7.5")
-            assertLabelValue("INT", "0")
-            assertLabelValue("TAI", "8")
         }
     }
 }

@@ -1,20 +1,16 @@
 package com.canvasstudio.ui.block
 
-import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.canvasstudio.data.local.entity.BlockEntity
-import com.canvasstudio.ui.block.components.SidebarContent
-import com.canvasstudio.ui.theme.CanvasColors
-import androidx.compose.ui.graphics.Color
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.canvasstudio.ui.theme.CanvasStudioTheme
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Testes de fluxos funcionais e não funcionais do Canvas Studio (Workflow e Sidebar).
+ * Testes de Fluxo Negocial Ponta a Ponta (E2E) para o Canvas Studio (Palco, Menus e Ações).
  */
 @RunWith(AndroidJUnit4::class)
 class CanvasWorkflowFeatureTest {
@@ -22,184 +18,124 @@ class CanvasWorkflowFeatureTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val testColors = CanvasColors(
-        bgMain = Color.White,
-        bgMenu = Color(0xFFF5F5F7),
-        bgCard = Color.White,
-        bgInput = Color.LightGray.copy(alpha = 0.1f),
-        bgButton = Color.LightGray.copy(alpha = 0.2f),
-        bgButtonHover = Color.LightGray.copy(alpha = 0.3f),
-        accent = Color(0xFF0071E3),
-        canvasGrid = Color.LightGray,
-        textMain = Color.Black,
-        textSecondary = Color.DarkGray,
-        textMuted = Color.Gray,
-        danger = Color(0xFFFF3B30),
-        border = Color.LightGray,
-        borderSubtle = Color.LightGray.copy(alpha = 0.5f)
-    )
+    private lateinit var repository: InMemoryBlockRepository
+    private lateinit var preferences: InMemoryPreferencesManager
+    private lateinit var viewModel: BlockViewModel
+
+    @Before
+    fun setup() {
+        repository = InMemoryBlockRepository()
+        preferences = InMemoryPreferencesManager()
+        viewModel = BlockViewModel(repository, preferences)
+    }
+
+    private fun launchCanvas() {
+        composeTestRule.setContent {
+            val isDarkMode = false
+            CanvasStudioTheme(darkTheme = isDarkMode) {
+                val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
+                BlockScreen(
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    onBack = {}
+                )
+            }
+        }
+        Thread.sleep(1500L)
+    }
 
     // =========================================================================
-    // CENÁRIOS FUNCIONAIS
+    // CENÁRIOS DE FLUXO NEGOCIAL COMPLETO
     // =========================================================================
 
     @Test
-    fun cenario01_adicaoDeBlocoTextoViaSidebar() {
-        var textBlockAdded = false
-
-        composeTestRule.setContent {
-            SidebarContent(
-                q = "",
-                onQ = {},
-                onSearch = {},
-                onImp = {},
-                onExp = {},
-                onClr = {},
-                onGen = {},
-                onOrg = {},
-                modules = mapOf("text" to true, "image" to true, "chart" to true),
-                onToggleModule = { _, _ -> },
-                isDarkMode = false,
-                onToggleTheme = {},
-                isGridEnabled = true,
-                onToggleGrid = {},
-                isLocked = false,
-                onToggleLock = {},
-                onAddTextBlock = { textBlockAdded = true },
-                onAddChartBlock = {},
-                onAddImageBlock = {},
-                onShowSettings = {},
-                onExportPdf = {},
-                onLoadTemplate = {},
-                colors = testColors
-            )
-        }
+    fun cenario01_fluxoCompletoCriarEExcluirBlocoDeTexto() {
+        launchCanvas()
 
         canvasStudioRobot(composeTestRule) {
+            // 1. Abre a barra lateral
+            openSidebar()
+            // 2. Clica em Novo Bloco de Texto
             addTextBlock()
+            // 3. Verifica que o bloco padrão foi inserido no Canvas
+            assertBlockWithTitle("Novo Bloco")
+            // 4. Clica no botão de excluir do bloco no Canvas
+            clickDeleteBlock()
+            // 5. Verifica que o bloco foi removido do Canvas
+            assertBlockDoesNotExist("Novo Bloco")
         }
-
-        assertTrue("Callback onAddTextBlock deve ser acionado", textBlockAdded)
     }
 
     @Test
-    fun cenario02_adicaoDeBlocoGraficoRadarViaSidebar() {
-        var chartBlockAdded = false
-
-        composeTestRule.setContent {
-            SidebarContent(
-                q = "",
-                onQ = {},
-                onSearch = {},
-                onImp = {},
-                onExp = {},
-                onClr = {},
-                onGen = {},
-                onOrg = {},
-                modules = mapOf("text" to true, "image" to true, "chart" to true),
-                onToggleModule = { _, _ -> },
-                isDarkMode = false,
-                onToggleTheme = {},
-                isGridEnabled = true,
-                onToggleGrid = {},
-                isLocked = false,
-                onToggleLock = {},
-                onAddTextBlock = {},
-                onAddChartBlock = { chartBlockAdded = true },
-                onAddImageBlock = {},
-                onShowSettings = {},
-                onExportPdf = {},
-                onLoadTemplate = {},
-                colors = testColors
-            )
-        }
+    fun cenario02_fluxoCompletoCriarBlocoRadarEOrganizar() {
+        launchCanvas()
 
         canvasStudioRobot(composeTestRule) {
+            // 1. Abre a barra lateral
+            openSidebar()
+            // 2. Clica em Novo Gráfico Radar
             addChartBlock()
+            // 3. Valida presença do Radar no Canvas
+            assertBlockWithTitle("Radar Chart")
+            // 4. Abre o menu e executa Auto Organizar
+            openSidebar()
+            autoOrganize()
+            // 5. Bloco continua presente e organizado
+            assertBlockWithTitle("Radar Chart")
         }
-
-        assertTrue("Callback onAddChartBlock deve ser acionado", chartBlockAdded)
     }
 
     @Test
-    fun cenario03_carregamentoDeTemplatePadrao() {
-        var templateTriggered = false
-
-        composeTestRule.setContent {
-            SidebarContent(
-                q = "",
-                onQ = {},
-                onSearch = {},
-                onImp = {},
-                onExp = {},
-                onClr = {},
-                onGen = {},
-                onOrg = {},
-                modules = mapOf("text" to true, "image" to true, "chart" to true),
-                onToggleModule = { _, _ -> },
-                isDarkMode = false,
-                onToggleTheme = {},
-                isGridEnabled = true,
-                onToggleGrid = {},
-                isLocked = false,
-                onToggleLock = {},
-                onAddTextBlock = {},
-                onAddChartBlock = {},
-                onAddImageBlock = {},
-                onShowSettings = {},
-                onExportPdf = {},
-                onLoadTemplate = { templateTriggered = true },
-                colors = testColors
-            )
-        }
+    fun cenario03_fluxoCompletoCriacaoViaBotaoFlutuanteFab() {
+        launchCanvas()
 
         canvasStudioRobot(composeTestRule) {
-            loadDefaultTemplate()
+            // 1. Clica no FAB '+' de criação rápida no Canvas
+            clickFabAdd()
+            // 2. Valida que o bloco foi adicionado ao palco
+            assertBlockWithTitle("Novo Bloco")
         }
-
-        assertTrue("Callback onLoadTemplate deve ser disparado", templateTriggered)
     }
 
-    // =========================================================================
-    // CENÁRIOS NÃO FUNCIONAIS
-    // =========================================================================
-
     @Test
-    fun cenario04_buscaEFiltragemDeBlocos() {
-        var queryCaptured = ""
-
-        composeTestRule.setContent {
-            SidebarContent(
-                q = queryCaptured,
-                onQ = { queryCaptured = it },
-                onSearch = {},
-                onImp = {},
-                onExp = {},
-                onClr = {},
-                onGen = {},
-                onOrg = {},
-                modules = mapOf("text" to true, "image" to true, "chart" to true),
-                onToggleModule = { _, _ -> },
-                isDarkMode = false,
-                onToggleTheme = {},
-                isGridEnabled = true,
-                onToggleGrid = {},
-                isLocked = false,
-                onToggleLock = {},
-                onAddTextBlock = {},
-                onAddChartBlock = {},
-                onAddImageBlock = {},
-                onShowSettings = {},
-                onExportPdf = {},
-                onLoadTemplate = {},
-                colors = testColors
-            )
-        }
+    fun cenario04_fluxoCompletoBuscaEFiltragemEmTempoReal() {
+        launchCanvas()
 
         canvasStudioRobot(composeTestRule) {
-            searchBlocks("Ninjutsu")
-        }
+            // 1. Cria um bloco de texto e um gráfico radar
+            openSidebar()
+            addTextBlock()
+            openSidebar()
+            addChartBlock()
 
-        assertEquals("Ninjutsu", queryCaptured)
+            // 2. Abre a busca e pesquisa por "Radar"
+            openSidebar()
+            searchBlocks("Radar")
+
+            // 3. Verifica indicador de filtro ativo e isolamento do bloco
+            assertFilterBadge("Radar")
+            assertBlockWithTitle("Radar Chart")
+        }
+    }
+
+    @Test
+    fun cenario05_fluxoCompletoLimparCanvas() {
+        launchCanvas()
+
+        canvasStudioRobot(composeTestRule) {
+            // 1. Adiciona múltiplos blocos
+            openSidebar()
+            addTextBlock()
+            openSidebar()
+            addChartBlock()
+
+            // 2. Abre o menu e aciona Limpar Tudo
+            openSidebar()
+            clearCanvas()
+
+            // 3. Valida que nenhum bloco permanece no Canvas
+            assertBlockDoesNotExist("Novo Bloco")
+            assertBlockDoesNotExist("Radar Chart")
+        }
     }
 }

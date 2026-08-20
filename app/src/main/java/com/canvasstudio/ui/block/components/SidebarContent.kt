@@ -46,7 +46,6 @@ fun SidebarContent(
     onAddChartBlock: () -> Unit,
     onAddImageBlock: () -> Unit,
     onExportPdf: () -> Unit,
-    onLoadTemplate: () -> Unit,
     colors: CanvasColors
 ) {
     Column(
@@ -70,32 +69,14 @@ fun SidebarContent(
                 color = colors.textMain,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.3).sp
+                letterSpacing = 0.5.sp
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = onToggleLock,
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-                        "Lock",
-                        tint = if (isLocked) colors.accent else colors.textMuted,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                IconButton(
-                    onClick = onToggleGrid,
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        if (isGridEnabled) Icons.Rounded.GridOn else Icons.Rounded.GridOff,
-                        "Grid",
-                        tint = if (isGridEnabled) colors.accent else colors.textMuted,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
+            Text(
+                "v2.0",
+                color = colors.textMuted,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
 
         // 1. FILTRO
@@ -135,10 +116,9 @@ fun SidebarContent(
             SidebarButton("Limpar Tudo", Icons.Rounded.DeleteSweep, colors.danger, isDanger = true, onClick = onClr)
         }
 
-        // 4. PORTABILIDADE & MODELOS
+        // 4. PORTABILIDADE
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            MenuSectionTitle("PORTABILIDADE & MODELOS", colors)
-            SidebarButton("Carregar Ficha RPG (Padrão)", Icons.Rounded.Description, colors.accent, onClick = onLoadTemplate)
+            MenuSectionTitle("PORTABILIDADE", colors)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.weight(1f)) {
                     SidebarButton("JSON Export", Icons.Rounded.FileUpload, colors.textMain, onClick = onExp)
