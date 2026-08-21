@@ -165,9 +165,15 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                 },
                 onImp = { importLauncher.launch("*/*") }, 
                 onExp = { exportLauncher.launch("canvas_export.json") },
-                onClr = { viewModel.clearCanvas() },
+                onClr = { 
+                    viewModel.clearCanvas()
+                    scope.launch { scaffoldState.drawerState.close() }
+                },
                 onGen = { viewModel.generateTestBlocks(50) },
-                onOrg = { viewModel.autoOrganizeBlocks() },
+                onOrg = { 
+                    viewModel.autoOrganizeBlocks()
+                    scope.launch { scaffoldState.drawerState.close() }
+                },
                 modules = modules,
                 onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) },
                 isDarkMode = isDarkMode,
@@ -310,7 +316,20 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
             }
             
             editingBlock?.let { block ->
-                EditBlockDialog(block, { editingBlock = null }, { viewModel.updateBlock(it); editingBlock = null }, { viewModel.updateBlockLive(it) }, colors)
+                val initialBlock = remember(block.id) { block }
+                EditBlockDialog(
+                    block = block, 
+                    onDismiss = { 
+                        viewModel.updateBlock(initialBlock)
+                        editingBlock = null 
+                    }, 
+                    onConfirm = { 
+                        viewModel.updateBlock(it)
+                        editingBlock = null 
+                    }, 
+                    onLiveUpdate = { viewModel.updateBlockLive(it) }, 
+                    colors = colors
+                )
             }
 
             if (showSettingsModal) {

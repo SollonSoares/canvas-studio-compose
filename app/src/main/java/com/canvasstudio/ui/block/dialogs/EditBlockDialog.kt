@@ -83,7 +83,9 @@ fun EditBlockDialog(
                 TextField(
                     value = title, 
                     onValueChange = { title = it }, 
-                    modifier = Modifier.fillMaxWidth(), 
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Campo Título" }, 
                     colors = TextFieldDefaults.textFieldColors(
                         textColor = colors.textMain, 
                         cursorColor = colors.accent, 
@@ -132,7 +134,10 @@ fun EditBlockDialog(
                                 textFieldValue = it
                                 textContent = it.text 
                             },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 100.dp)
+                                .semantics { contentDescription = "Campo Conteúdo Texto" },
                             placeholder = { Text("Use **negrito** ou *itálico*") },
                             colors = TextFieldDefaults.textFieldColors(
                                 textColor = colors.textMain, 
@@ -146,7 +151,9 @@ fun EditBlockDialog(
                         TextField(
                             value = imageUrl,
                             onValueChange = { imageUrl = it },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .semantics { contentDescription = "Campo URL Imagem" },
                             placeholder = { Text("URL da imagem") },
                             colors = TextFieldDefaults.textFieldColors(
                                 textColor = colors.textMain, 

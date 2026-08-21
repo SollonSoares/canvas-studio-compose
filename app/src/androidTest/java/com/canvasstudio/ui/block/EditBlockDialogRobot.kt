@@ -5,7 +5,7 @@ import androidx.compose.ui.test.junit4.ComposeContentTestRule
 
 /**
  * Robot para encapsular ações e asserções no diálogo de edição de blocos (EditBlockDialog).
- * Inclui pausas de execução para acompanhamento visual das etapas no dispositivo.
+ * Utiliza performTextReplacement para inserção atômica e confiável de valores.
  */
 class EditBlockDialogRobot(private val rule: ComposeContentTestRule) {
 
@@ -14,6 +14,7 @@ class EditBlockDialogRobot(private val rule: ComposeContentTestRule) {
     }
 
     fun assertDialogTitle(expectedTitle: String = "Editar Bloco"): EditBlockDialogRobot {
+        rule.waitForIdle()
         rule.onNodeWithText(expectedTitle).assertIsDisplayed()
         stepPause(800L)
         return this
@@ -22,63 +23,63 @@ class EditBlockDialogRobot(private val rule: ComposeContentTestRule) {
     fun selectType(type: String): EditBlockDialogRobot {
         val formattedType = type.replaceFirstChar { it.uppercase() }
         rule.onNodeWithText(formattedType).performClick()
+        rule.waitForIdle()
         stepPause()
         return this
     }
 
     fun enterTitle(newTitle: String): EditBlockDialogRobot {
-        rule.onNodeWithText("Título").assertIsDisplayed()
-        rule.onAllNodes(hasSetTextAction())[0].performTextClearance()
-        stepPause(400L)
-        rule.onAllNodes(hasSetTextAction())[0].performTextInput(newTitle)
+        rule.onNodeWithContentDescription("Campo Título").performTextReplacement(newTitle)
+        rule.waitForIdle()
         stepPause()
         return this
     }
 
     fun enterChartAttribute(label: String, value: String): EditBlockDialogRobot {
-        rule.onNodeWithContentDescription("Campo $label").performTextClearance()
-        stepPause(300L)
-        rule.onNodeWithContentDescription("Campo $label").performTextInput(value)
+        rule.onNodeWithContentDescription("Campo $label").performTextReplacement(value)
+        rule.waitForIdle()
         stepPause(800L)
         return this
     }
 
     fun clickIncrement(label: String): EditBlockDialogRobot {
         rule.onNodeWithContentDescription("Aumentar $label").performClick()
+        rule.waitForIdle()
         stepPause(800L)
         return this
     }
 
     fun clickDecrement(label: String): EditBlockDialogRobot {
         rule.onNodeWithContentDescription("Diminuir $label").performClick()
+        rule.waitForIdle()
         stepPause(800L)
         return this
     }
 
     fun enterTextContent(text: String): EditBlockDialogRobot {
-        rule.onAllNodes(hasSetTextAction())[1].performTextClearance()
-        stepPause(300L)
-        rule.onAllNodes(hasSetTextAction())[1].performTextInput(text)
+        rule.onNodeWithContentDescription("Campo Conteúdo Texto").performTextReplacement(text)
+        rule.waitForIdle()
         stepPause()
         return this
     }
 
     fun enterImageUrl(url: String): EditBlockDialogRobot {
-        rule.onAllNodes(hasSetTextAction())[1].performTextClearance()
-        stepPause(300L)
-        rule.onAllNodes(hasSetTextAction())[1].performTextInput(url)
+        rule.onNodeWithContentDescription("Campo URL Imagem").performTextReplacement(url)
+        rule.waitForIdle()
         stepPause()
         return this
     }
 
     fun clickSave(): EditBlockDialogRobot {
         rule.onNodeWithText("Salvar").performClick()
+        rule.waitForIdle()
         stepPause(1500L)
         return this
     }
 
     fun clickCancel(): EditBlockDialogRobot {
         rule.onNodeWithText("Cancelar").performClick()
+        rule.waitForIdle()
         stepPause(1000L)
         return this
     }

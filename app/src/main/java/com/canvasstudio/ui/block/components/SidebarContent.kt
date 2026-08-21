@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -82,23 +86,40 @@ fun SidebarContent(
         // 1. FILTRO
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             MenuSectionTitle("FILTRO", colors)
-            BasicTextField(
-                value = q,
-                onValueChange = onQ,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colors.bgInput, RoundedCornerShape(6.dp))
-                    .border(1.dp, colors.borderSubtle, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                textStyle = TextStyle(color = colors.textMain, fontSize = 13.sp),
-                cursorBrush = SolidColor(colors.accent),
-                decorationBox = { innerTextField ->
-                    if (q.isEmpty()) {
-                        Text("Buscar blocos...", color = colors.textMuted, fontSize = 13.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BasicTextField(
+                    value = q,
+                    onValueChange = onQ,
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(colors.bgInput, RoundedCornerShape(6.dp))
+                        .border(1.dp, colors.borderSubtle, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    textStyle = TextStyle(color = colors.textMain, fontSize = 13.sp),
+                    cursorBrush = SolidColor(colors.accent),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+                    singleLine = true,
+                    decorationBox = { innerTextField ->
+                        if (q.isEmpty()) {
+                            Text("Buscar blocos...", color = colors.textMuted, fontSize = 13.sp)
+                        }
+                        innerTextField()
                     }
-                    innerTextField()
+                )
+                Spacer(Modifier.width(6.dp))
+                IconButton(
+                    onClick = onSearch,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(colors.accent, RoundedCornerShape(6.dp))
+                ) {
+                    Icon(Icons.Default.Search, "Buscar", tint = Color.White, modifier = Modifier.size(18.dp))
                 }
-            )
+            }
         }
 
         // 2. CRIAR (Strict Web Alignment)
