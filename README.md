@@ -1,303 +1,262 @@
 <div align="center">
 
-# 🥷 CANVAS STUDIO COMPOSE — NARUTO RPG
-### *High-Fidelity Visual Workspace & Modular Shinobi Engine*
+# 🎨 CANVAS STUDIO COMPOSE
+### *Next-Gen Reactive Infinite Canvas Engine & On-Device Intelligence*
 
 <p align="center">
-  <strong>A transposição mobile definitiva do Canvas Studio. Interface <em>macOS-inspired</em> com <em>Glassmorphism</em> nativo, orquestrada por uma arquitetura de <em>Reactive Micro-Kernel</em> e <em>UDF</em>.</strong><br>
-  Ambiente de engenharia visual com <em>Snap-to-Grid</em> rigoroso, radar trigonométrico de atributos e persistência atômica.
+  <strong>O estado da arte em engenharia visual e arquitetura reativa para Android. Uma plataforma de workspace infinito com renderização acelerada por GPU, Design System estrito, pipeline de inteligência On-Device (Google ML Kit OCR) e portabilidade bidirecional de dados.</strong>
 </p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/⚡_Android_Native-0a84ff?style=for-the-badge&logo=android&logoColor=white" alt="Android Native"></a>
-  <img src="https://img.shields.io/badge/Kotlin_2.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin">
-  <img src="https://img.shields.io/badge/Jetpack_Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Compose">
-  <img src="https://img.shields.io/badge/Architecture-Modular-blue" alt="Modular">
+  <img src="https://img.shields.io/badge/Platform-Android_Native-0A84FF?style=for-the-badge&logo=android&logoColor=white" alt="Android Native">
+  <img src="https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin 2.0">
+  <img src="https://img.shields.io/badge/UI_Toolkit-Jetpack_Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose">
+  <img src="https://img.shields.io/badge/Architecture-Clean_%26_Feature--Flows-34C759?style=for-the-badge" alt="Clean Architecture">
+  <img src="https://img.shields.io/badge/Intelligence-Google_ML_Kit-FF9500?style=for-the-badge&logo=google&logoColor=white" alt="ML Kit">
 </p>
 
 ---
 
-### 📑 Architecture & Design Index
-[1. Design System Tokens](#-design-system--tokens-visuais) • 
-[2. Modular Architecture](#-arquitetura-modular-do-sistema) • 
-[3. Core Engines](#-motores-e-fundamentos-matemáticos) • 
-[4. Module Matrix](#-matriz-de-módulos-sistêmicos) • 
-[5. Implementation](#-como-executar-localmente)
+### 📑 Sumário Executivo & Arquitetural
+[1. Visão Geral](#-visão-geral-do-sistema) • 
+[2. Design System Centralizado](#-design-system-centralizado) • 
+[3. Arquitetura Modular por Flows](#-arquitetura-modular-por-flows) • 
+[4. Motores de Engenharia & Performance](#-motores-de-engenharia--performance) • 
+[5. Pipeline de IA & OCR de Comprovantes](#-pipeline-de-ia--ocr-on-device) • 
+[6. Portabilidade & Esquema JSON](#-portabilidade-e-esquema-de-dados) • 
+[7. Execução e Build](#-guia-de-execução-e-engenharia)
 
 </div>
 
 ---
 
-## 🎨 Design System & Tokens Visuais
+## 🌟 Visão Geral do Sistema
 
-O sistema adota o **macOS Glassmorphism Standard**, garantindo profundidade visual e hierarquia clara através de transparências e blur.
+O **Canvas Studio Compose** é um ambiente de alta precisão projetado para manipulação espacial livre de blocos (texto rico, mídia de alta resolução, gráficos multieixo e comprovantes financeiros). Construído 100% sobre **Jetpack Compose**, o sistema elimina completamente o overhead de Views legadas através de transformações diretas em GPU e um micro-kernel reativo impulsionado por Kotlin Coroutines e StateFlow.
 
-<details>
-<summary><b>▶️ Especificações de Tokens e Superfícies</b></summary>
+### 💎 Principais Diferenciais Técnicos:
+* **Renderização 60/120 FPS sem Recomposição Excessiva**: Transformações espaciais (Pan e Zoom de `0.15x` a `3.0x`) desacopladas da fase de layout via `graphicsLayer`.
+* **Design System Atômico Estrito**: Interface com tokens unificados para Modo Claro e Escuro, tipografia proporcional e componentes reutilizáveis padronizados (`CanvasModal`, `CanvasToggle`, `CanvasButton`, `CanvasTextField`, `CanvasCard`).
+* **On-Device Vision AI (OCR)**: Análise em tempo real de comprovantes bancários (PIX, TED, Tributos, Boletos) via **Google ML Kit Vision**, com extração inteligente de valores, partes (`De`/`Para`), instituição e timestamp.
+* **Persistência I/O Otimizada**: Prevenção do limite de 2MB do `CursorWindow` do SQLite através do salvamento atômico em disco de arquivos locais (`file:///`) com metadados estruturados em Room.
 
-<br>
+---
 
-### 💎 Glassmorphism Standard
-Toda superfície elevada no sistema deve seguir o contrato de renderização:
-- **Alpha:** `0.82f` (Opacidade de fundo).
-- **Background Blur:** `20.dp` (Renderização via `graphicsLayer`).
-- **Border:** `1.dp` com Alpha `0.1f` (Cor: `White`).
-- **Corner Radius:** `16.dp` (Padrão para cards e diálogos).
+## 🎨 Design System Centralizado
 
-### 🎨 Color Palette (Tokens)
-| Categoria | Token | Valor Hex | Uso Semântico |
+Todo o ecossistema visual do aplicativo é orquestrado pelo pacote `com.canvasstudio.designsystem`, provido via `CompositionLocalProvider` e desacoplado de regras de negócio.
+
+### 🎭 Tokens de Cores Semânticas (`CanvasColors`)
+
+| Token Semântico | Dark Theme (`DarkCanvasColors`) | Light Theme (`LightCanvasColors`) | Finalidade de Uso |
 | :--- | :--- | :--- | :--- |
-| **Accent** | `Apple Blue` | `#0A84FF` | Ações primárias e indicadores de foco. |
-| **Danger** | `Apple Red` | `#FF453A` | Ações destrutivas e estados de erro. |
-| **Surface** | `Glass Deep` | `#1A1D29` | Base para componentes com blur. |
+| **`accent`** | `#0A84FF` *(Apple Blue)* | `#007AFF` *(Apple Blue)* | Ações primárias, foco e seleção ativa. |
+| **`accentVariant`** | `#5AC8FA` | `#0056B3` | Destaques secundários e gradientes. |
+| **`bgMain`** | `#000000` *(Pure Black)* | `#F2F2F7` *(System Light)* | Palco de trabalho e viewport infinito. |
+| **`bgMenu` / `bgCard`** | `#1C1C1E` / `#2C2C2E` | `#FFFFFF` | Superfícies elevadas, drawers e modais. |
+| **`bgInput`** | `#26767680` | `#0F000000` | Campos de entrada e backgrounds de controle. |
+| **`badgePix`** | `#32BCAD` *(Teal/Ciano)* | `#00A896` | Identificação visual de transações PIX. |
+| **`success`** | `#34C759` *(System Green)* | `#28A745` | Valores monetários e validações positivas. |
+| **`danger`** | `#FF453A` *(System Red)* | `#FF3B30` | Bloqueio, exclusão e alertas críticos. |
 
-```kotlin
-// Referência de Implementação do Sistema
-Modifier
-    .clip(RoundedCornerShape(16.dp))
-    .background(Color(0x1A1D29).copy(alpha = 0.82f))
-    .blur(20.dp)
-    .border(1.dp, Color.White.copy(alpha = 0.1f))
-```
-
-</details>
+### 🧱 Componentes Atômicos Padronizados:
+* **`CanvasModal`**: Diálogo em 3 camadas (cabeçalho fixo com botão de fechar, corpo com rolagem independente e rodapé de ações ancorado que nunca sobrepõe o conteúdo).
+* **`CanvasToggle`**: Switch customizado com thumb branco, trilha no azul de destaque (`colors.accent`) e escala uniforme de `0.85f`.
+* **`CanvasButton`**: Botões tipados (`Primary`, `Secondary`, `Outlined`, `Ghost`, `Danger`) com ripple nativo e cantos arredondados.
+* **`CanvasTextField`**: Entradas de texto com foco reativo e estados de erro.
+* **`CanvasBadge`**: Pílulas de alta legibilidade para estados financeiros e tags.
 
 ---
 
-<<<<<<< HEAD
-## 🏛️ Arquitetura Modular do Sistema
+## 🏛️ Arquitetura Modular por Flows
 
-O Canvas Studio Compose é dividido em camadas de responsabilidade única, evitando itens avulsos e garantindo escalabilidade via Unidirectional Data Flow (UDF).
+O sistema adota os princípios de **Clean Architecture** e **Modular Feature-Driven Development**:
 
-<details>
-<summary><b>▶️ Visualizar Hierarquia Modular e Fluxo de Dados</b></summary>
-
-<br>
-
-### Diagrama de Micro-Kernel Reativo
 ```mermaid
-graph TB
-    subgraph UI_Surface ["🖥️ UI SURFACE (Atoms & Organisms)"]
-        Sidebar["SidebarContent.kt<br/><i>(FILTRO • CRIAR • ORGANIZAÇÃO • PORTABILIDADE)</i>"]
-        Canvas["BlockScreen.kt<br/><i>(Viewport Coordinator)</i>"]
-        Blocks["DraggableBlock.kt<br/><i>(Modular Atom)</i>"]
+graph TD
+    subgraph UI_LAYER ["🖥️ PRESENTATION LAYER (Jetpack Compose)"]
+        CS["CanvasScreen.kt<br/><i>(Viewport Coordinator & GPU Layer)</i>"]
+        SM["SettingsModal.kt<br/><i>(Configurações & Feature Toggles)</i>"]
+        DB["DraggableBlock.kt<br/><i>(Atom Host com Gestos Touch)</i>"]
+        IN["SidebarContent.kt<br/><i>(Inspetor de Propriedades & Ações)</i>"]
     end
 
-    subgraph SYSTEM_ENGINE ["⚡ SYSTEM ENGINE (Core Logic)"]
-        Grid["CanvasBackground.kt<br/><i>(Snap Engine)</i>"]
-        Trig["ChartBlock.kt<br/><i>(Trig Engine)</i>"]
+    subgraph DESIGN_SYSTEM ["🎨 DESIGN SYSTEM (com.canvasstudio.designsystem)"]
+        DS_Tokens["Tokens: Colors, Dimens, Typography"]
+        DS_Components["Components: Modal, Toggle, Button, TextField, Badge"]
+        DS_Theme["CanvasStudioTheme (CompositionLocal)"]
     end
 
-    subgraph KERNEL ["🧠 REACTIVE KERNEL (State)"]
-        VM["BlockViewModel.kt<br/><i>(UDF Hub)</i>"]
-        Repo["BlockRepository.kt<br/><i>(Atomic Sync)</i>"]
+    subgraph FEATURE_FLOWS ["🧩 FEATURE FLOWS (com.canvasstudio.features)"]
+        OCR_FLOW["ocr_importer<br/><i>(SharedMediaImporter & ReceiptAnalyzer)</i>"]
+        PORT_FLOW["export_portability<br/><i>(JsonPortabilityService & PdfExporter)</i>"]
     end
 
-    subgraph PERSISTENCE ["💾 DATA LAYER"]
-        Room[("Room DB")]
-        DS[("DataStore")]
+    subgraph DOMAIN_CORE ["🧠 DOMAIN & STATE (Unidirectional Data Flow)"]
+        VM["BlockViewModel.kt<br/><i>(Reactive State Hub & Coroutine Scope)</i>"]
+        CFG["CanvasConfig.kt<br/><i>(Domain Preferences)</i>"]
+        RM["ReceiptModels.kt<br/><i>(Domain Models)</i>"]
     end
 
-    VM -->|StateFlow| UI_Surface
-    UI_Surface -->|Events| VM
-    VM -->|Sync| Repo
-    Repo -->|IO| Room
+    subgraph DATA_PERSISTENCE ["💾 DATA LAYER"]
+        REPO["BlockRepository.kt<br/><i>(Atomic Sync)</i>"]
+        ROOM[("Room SQLite DB")]
+        DSTORE[("DataStore Preferences")]
+    end
+
+    DESIGN_SYSTEM --> UI_LAYER
+    UI_LAYER -->|Events / Intents| VM
+    VM -->|StateFlow / Immutable State| UI_LAYER
+    VM --> FEATURE_FLOWS
+    VM --> REPO
+    REPO --> ROOM
+    REPO --> DSTORE
 ```
 
-</details>
+---
+
+## 🔬 Motores de Engenharia & Performance
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        GPU ACCELERATED PIPELINE                        │
+│                                                                        │
+│   Touch Gestures ──► detectTransformGestures ──► Offset/Scale Mutable   │
+│                                                       │                │
+│                                                       ▼                │
+│                 Draw Phase (Zero Recomposition) ◄── graphicsLayer      │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 1. Motor de Transformação Espacial ($\mathcal{O}(1)$)
+A navegação pelo Canvas não dispara recomposições na árvore de composables. As matrizes de translação e escala são aplicadas na fase de renderização da GPU via `graphicsLayer`:
+$$\begin{bmatrix} X_{render} \\ Y_{render} \\ 1 \end{bmatrix} = \begin{bmatrix} S & 0 & T_x \\ 0 & S & T_y \\ 0 & 0 & 1 \end{bmatrix} \begin{bmatrix} X_{world} \\ Y_{world} \\ 1 \end{bmatrix}$$
+
+### 2. Motor de Grade Magnética Infinita (*State Deferral*)
+O componente `CanvasBackground` consome o estado de escala e offset através de provedores de função lambda (`scale = { scale }`, `offset = { offset }`). Isso permite que a grade trace seus eixos ortogonais no `DrawScope` sem invalidar os nós estruturais da interface.
+
+### 3. Motor Poligonal Multieixo (Radar Chart)
+Renderizador trigonométrico para diagramação radial com eixos uniformes em intervalos de $60^\circ$ ($\frac{\pi}{3}\text{ rad}$):
+$$X_i = C_x + \left( \frac{V_i}{V_{max}} \cdot R \right) \cos\left( i \cdot \frac{\pi}{3} - \frac{\pi}{2} \right)$$
+$$Y_i = C_y + \left( \frac{V_i}{V_{max}} \cdot R \right) \sin\left( i \cdot \frac{\pi}{3} - \frac{\pi}{2} \right)$$
 
 ---
 
-## 🔬 Motores e Fundamentos Matemáticos
+## 🤖 Pipeline de IA & OCR On-Device
 
-O sistema opera sob leis matemáticas estritas para garantir paridade 1:1 com a lógica Web e as métricas do RPG.
+O aplicativo integra um pipeline assíncrono para processar imagens e arquivos PDF compartilhados diretamente de apps bancários (Itaú, Nubank, Banco do Brasil, Bradesco, Santander, Inter, etc.):
 
-<details>
-<summary><b>▶️ Especificações dos Motores de Cálculo</b></summary>
+```mermaid
+sequenceDiagram
+    autonumber
+    participant AppExt as App Externo / Galeria
+    participant MainAct as MainActivity (Intent Filter)
+    participant Importer as SharedMediaImporter (IO)
+    participant MLKit as Google ML Kit Vision
+    participant Analyzer as ReceiptAnalyzer (Regex Engine)
+    participant RoomDB as Room Database
+    participant Canvas as Canvas UI (Compose)
 
-<br>
+    AppExt->>MainAct: Intent ACTION_SEND (PDF / Imagem)
+    MainAct->>Importer: importMedia(uri, autoOcrEnabled)
+    alt Arquivo PDF
+        Importer->>Importer: Renderiza Página 0 via PdfRenderer (ARGB_8888)
+    else Imagem JPG/PNG
+        Importer->>Importer: Decodifica Bitmap com downscaling inteligente
+    end
+    Importer->>Importer: Salva arquivo em context.filesDir/canvas_images
+    Importer->>MLKit: Processa Bitmap com TextRecognizer
+    MLKit-->>Importer: Retorna Texto Completo Reconhecido
+    Importer->>Analyzer: analyze(rawText, fileName)
+    Analyzer->>Analyzer: Extrai Valor, Data, Pagador (De), Recebedor (Para) e PIX
+    Analyzer-->>Importer: Retorna AnalyzedReceipt
+    Importer->>RoomDB: Insere BlockEntity (com metadados e URI local)
+    RoomDB-->>Canvas: Emite novo StateFlow e exibe Bloco instantaneamente com Badges
+```
 
-### 1. Motor de Snap-to-Grid Magnético (20dp)
-O sistema ignora posições intermediárias, forçando o alinhamento magnético atômico:
-$$P_{snap} = \text{round}\left( \frac{P_{raw}}{20} \right) \cdot 20$$
-
-### 2. Motor de Radar Trigonométrico (Naruto RPG)
-O gráfico de atributos utiliza 6 eixos simétricos com intervalos constantes de $60^\circ$ ($\frac{\pi}{3}$ rad):
-- **Ângulo do Eixo $i$:** $\theta_i = (i \cdot \frac{\pi}{3}) - \frac{\pi}{2}$
-- **Projeção de Vértice:** 
-  - $X = C_x + \left( \frac{V_i}{V_{max}} \cdot R \right) \cdot \cos(\theta_i)$
-  - $Y = C_y + \left( \frac{V_i}{V_{max}} \cdot R \right) \cdot \sin(\theta_i)$
-
-</details>
-
----
-
-## 🗂️ Matriz de Módulos Sistêmicos
-
-Hierarquia modular organizada pela funcionalidade no ecossistema do Design System.
-
-<details>
-<summary><b>▶️ Catálogo de Módulos e Responsabilidades</b></summary>
-
-<br>
-
-| Camada | Módulo | Responsabilidade Técnica |
-| :--- | :--- | :--- |
-| **Viewport** | `Coordenador` | Gestão de escala (0.15f a 3.0f) e translação do palco. |
-| **Grid Engine** | `CanvasBackground` | Renderização e cálculo do grid magnético de 20dp. |
-| **Dashboard** | `SidebarContent` | Navegação estruturada em: **FILTRO**, **CRIAR**, **ORGANIZAÇÃO**, **PORTABILIDADE**. |
-| **Property Editor**| `EditBlockDialog` | Refatoração de propriedades e edição atômica de blocos. |
-| **Rich Text** | `RichTextHandler` | Parser de tags Web (html/campos) para `AnnotatedString`. |
-| **Chart System** | `ChartBlock` | Motor de radar poligonal simétrico ($\pi/3$ rad). |
-| **Image Core** | `Coil integration` | Gerenciamento de cache Lru e renderização assíncrona. |
-
-</details>
+### 🎯 Capacidades do Extrator:
+* **Identificação de Transação PIX**: Detecta chaves, termos bancários e aplica badge ciano `[PIX]`.
+* **Segregação Rigorosa de Partes**: Separação precisa entre Pagador/Origem (`De`) e Destinatário/Favorecido (`Para`), eliminando falsos positivos com preposições.
+* **Formatador Monetário**: Conversão de strings de OCR para floats numéricos auditáveis (`R$ 1.250,50` $\rightarrow$ `1250.50f`).
+* **Timestamp**: Captura e formatação de data/hora da realização do pagamento.
 
 ---
 
-## 📊 Métricas e Performance
+## 📄 Portabilidade e Esquema de Dados
 
-<details>
-<summary><b>▶️ Análise de Complexidade e Eficiência</b></summary>
+O Canvas Studio adota portabilidade bidirecional compatível com a Web e outros sistemas analíticos através do serviço isolado `JsonPortabilityService`.
 
-<br>
+### 📑 Esquema JSON Exportado (`JSON Export`):
+Todos os valores financeiros, metadados e o **texto bruto completo do OCR (`rawText`)** são preservados diretamente dentro do array `campos` de cada bloco:
 
-- **Snap-to-Grid:** $\mathcal{O}(1)$ - Cálculo matemático puro sem iteração.
-- **Radar Rendering:** $\mathcal{O}(6)$ - Vértices fixos processados via GPU (DrawScope).
-- **State Update:** $\mathcal{O}(N)$ - Sincronização atômica de $N$ blocos via Room Flowbus.
-
-</details>
+```json
+{
+  "metadata": {
+    "versao": "2.0.0",
+    "timestamp": 1787295483878,
+    "brand": "Canvas Studio"
+  },
+  "blocos": {
+    "data_t_1_45231": {
+      "top": "60px",
+      "left": "60px",
+      "width": 320,
+      "height": 480,
+      "type": "image",
+      "title": "Pix - João Silva",
+      "url": "file:///data/user/0/com.canvasstudio/files/canvas_images/comprovante_123.jpg",
+      "campos": [
+        {
+          "html": "<div><b>Valor:</b> R$ 150,00</div><div><b>Realizado em:</b> 21/08/2026 14:30</div><div><b>De (Pagador):</b> SOLLON SOARES</div><div><b>Para (Destinatário):</b> JOAO DA SILVA</div><div><b>Instituição:</b> NU PAGAMENTOS S.A.</div>",
+          "className": "sub-campo",
+          "valor": 150.00,
+          "valorFormatted": "R$ 150,00",
+          "realizadoEm": "21/08/2026 14:30",
+          "isPix": true,
+          "de": "SOLLON SOARES",
+          "pagador": "SOLLON SOARES",
+          "para": "JOAO DA SILVA",
+          "destinatario": "JOAO DA SILVA",
+          "instituicao": "NU PAGAMENTOS S.A.",
+          "banco": "NU PAGAMENTOS S.A.",
+          "rawText": "Comprovante de pagamento Pix\nNome: SOLLON SOARES\nRecebedor: JOAO DA SILVA\nValor: R$ 150,00..."
+        }
+      ]
+    }
+  }
+}
+```
 
 ---
 
-## 🚀 Como Executar Localmente
+## 🚀 Guia de Execução e Engenharia
 
-<details>
-<summary><b>▶️ Requisitos de Ambiente de Engenharia</b></summary>
+### 📋 Requisitos de Ambiente:
+* **JDK:** Java 17 (Azul Zulu ou OpenJDK recomendado).
+* **Android SDK:** API Mínima 26 (Android 8.0 Oreo), API Alvo 34 (Android 14).
+* **Gradle:** 8.5+ com Kotlin 2.0.21.
 
-<br>
+### 🛠️ Comandos de Build e Execução:
 
-1. **Android Studio Jellyfish**+ (ou superior).
-2. **Gradle 8.5**+ com suporte a Kotlin 2.0.
-3. **Dispositivo/Emulador:** Mínimo Android API 26 (Oreo).
-4. **Build:** `gradle assembleDebug` para compilação nativa.
+```bash
+# 1. Compilação e Verificação Estática de Tipos
+./gradlew compileDebugKotlin
 
-</details>
+# 2. Execução dos Testes Unitários de Arquitetura
+./gradlew testDebugUnitTest
+
+# 3. Geração do Pacote APK de Debug
+./gradlew assembleDebug
+
+# 4. Instalação Direta no Dispositivo/Emulador Conectado
+./gradlew installDebug
+```
 
 ---
 
 <div align="center">
 
-**Sollon Soares** — *Lead Shinobi Engineer*
-Distributed under **MIT License**.
+**Canvas Studio Compose** • Arquitetura e Engenharia por **Sollon Soares**  
+*Distribuído sob a licença [MIT](LICENSE).*
 
 </div>
-=======
-## 🚀 3. Tecnologias Utilizadas
-*   **Linguagem:** Kotlin
-*   **UI Toolkit:** Jetpack Compose (Material Design 3)
-*   **Asynchrony:** Kotlin Coroutines & Flows
-*   **Local DB:** Room Database (SQLite)
-*   **Preferences:** Jetpack DataStore
-*   **Serialization:** Kotlinx Serialization
-*   **Image Loading:** Coil Image Loader
-
----
-
-## Protocolo ATE - Relatório de Abortagem de Automação e Resolução Direta
-
-### 1. Sintaxe Gramatical
-
-* **Falha de Caracteres Especiais no Terminal (`<─>`)**: O PowerShell falhou ao processar os caracteres de seta (`<─>`) dentro do bloco de texto puro em linha de comando, corrompendo a execução ou gerando um erro de interpretador de script no terminal do Windows.
-
-### 2. Performance/Complexidade
-
-* **Interrupção de Scripts**: Automações via linha de comando para escrita de textos longos ou diagramas textuais geram fricção desnecessária devido a restrições de codificação do console (`UTF-8`/`ANSI`).
-
----
-
-### ## Solução Definitiva: Cópia Manual Direta
-
-Para evitar qualquer falha de terminal ou quebra de arquivos, **não use o PowerShell**.
-
-Abra o arquivo `README.md` na raiz do seu projeto usando o seu editor de texto (Android Studio, VS Code ou Bloco de Notas), apague tudo o que estiver lá dentro e **cole diretamente** o bloco de texto exato abaixo:
-
-```markdown
-# Canvas Studio Compose
-
-Aplicativo Android estruturado sob a arquitetura moderna de desenvolvimento (MAD), demonstrando um fluxo unidirecional de dados (UDF) com persistência local e interface totalmente reativa.
-
-## Pilha Tecnológica & Bibliotecas
-
-- **Linguagem:** Kotlin (JVM Target 17)
-- **Interface Gráfica:** Jetpack Compose (Material Design 2 & 3)
-- **Persistência de Dados:** Room Database (SQLite)
-- **Assincronismo:** Kotlin Coroutines & Asynchronous Flows (StateFlow)
-- **Gerenciamento de Ciclo de Vida:** Jetpack Lifecycle (ViewModel & Lifecycle-aware components)
-- **Injeção de Dependências:** Manual via padrão Container (AppContainer)
-
----
-
-## Arquitetura do Sistema
-
-O projeto adota o padrão arquitetural **MVVM (Model-View-ViewModel)** com separação estrita de conceitos em camadas:
-
-
-```
-
-[ Camada de UI ]          MainActivity (Jetpack Compose Screen)
-▲
-│ (Coleta uiState via StateFlow)
-[ Camada de Apresentação ] ProjectViewModel (Retém estado / Dispara Coroutines)
-▲
-│
-[ Camada de Negócios ]     ProjectRepository (Abstração de fontes de dados)
-▲
-│
-[ Camada de Dados ]        ProjectDao <─> Room Database (SQLite)
-
-```
-
-1. **Camada de Dados:** Gerencia a entidade `ProjectEntity` e expõe fluxos de dados contínuos do SQLite através do Room.
-2. **Camada de Apresentação:** O `ProjectViewModel` consome os fluxos do repositório, mapeia os dados para um estado de UI selado (`ProjectUiState`) e expõe um `StateFlow` otimizado para o ciclo de vida da aplicação.
-3. **Camada de UI:** Composição declarativa que reage dinamicamente às mudanças de estado e delega eventos do usuário (inserção e deleção) de volta para o ViewModel.
-
----
-
-## Como Executar o Projeto
-
-### Pré-requisitos
-- Android Studio
-- JDK 17
-- Dispositivo físico Android ou Emulador com API >= 26
-
-### Execução via Linha de Comando (CLI)
-
-1. Compilar o código fonte:
-```bash
-./gradlew compileDebugKotlin
-
-```
-
-2. Instalar o aplicativo no dispositivo conectado:
-
-```bash
-./gradlew installDebug
-
-```
-
-```
-
----
-
-### Sincronização do Repositório
-
-Após salvar o arquivo manualmente, execute os comandos do Git para atualizar o servidor remoto:
-
-```cmd
-git add README.md
-git commit -m "docs: atualiza README.md manualmente"
-git push
-
-```
->>>>>>> cca11785fd61fc6a88c0f6560f7fc33c7be277ac
