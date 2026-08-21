@@ -13,7 +13,8 @@ val CanvasTheme = com.canvasstudio.designsystem.CanvasTheme
 @Composable
 fun CanvasStudioTheme(
     darkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme(),
+    themeStyle: String = "cupertino",
     content: @Composable () -> Unit
 ) {
-    com.canvasstudio.designsystem.CanvasStudioTheme(darkTheme = darkTheme, content = content)
+    com.canvasstudio.designsystem.CanvasStudioTheme(darkTheme = darkTheme, themeStyle = themeStyle, content = content)
 }

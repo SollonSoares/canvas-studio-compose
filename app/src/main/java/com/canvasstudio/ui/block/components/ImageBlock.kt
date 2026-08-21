@@ -72,15 +72,8 @@ fun ImageBlock(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { selectedUri: android.net.Uri? ->
         selectedUri?.let { uri ->
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val bytes = inputStream?.readBytes()
-                if (bytes != null) {
-                    val base64 = "data:image/jpeg;base64," + android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-                    isEditingUrl = false
-                    viewModel.updateBlock(block.copy(contentJson = buildJsonObject { put("url", base64) }.toString()))
-                }
-            } catch (e: Exception) {}
+            isEditingUrl = false
+            viewModel.updateBlockImageFromUri(block, uri, context)
         }
     }
 

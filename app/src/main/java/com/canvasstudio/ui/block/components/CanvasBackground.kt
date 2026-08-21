@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
+import com.canvasstudio.designsystem.CanvasTheme
 
 @Composable
 fun CanvasBackground(
@@ -18,6 +19,7 @@ fun CanvasBackground(
     offset: () -> Offset = { Offset.Zero }, 
     gridColor: Color
 ) {
+    val isTeenage = CanvasTheme.isTeenage
     val paint = remember {
         Paint().apply {
             isAntiAlias = true
@@ -27,7 +29,7 @@ fun CanvasBackground(
     }
     
     // FloatArray pré-alocado reutilizável para zero alocação de memória por frame
-    val floatArray = remember { FloatArray(10000) }
+    val floatArray = remember { FloatArray(16000) }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val s = scale()
@@ -50,21 +52,46 @@ fun CanvasBackground(
         val startY = ((o.y % snapSize) + snapSize) % snapSize - snapSize
         
         var index = 0
-        val maxFloats = floatArray.size - 2
+        val maxFloats = floatArray.size - 8
         var x = startX
         
-        while (x < size.width + snapSize && index < maxFloats) {
-            var y = startY
-            while (y < size.height + snapSize && index < maxFloats) {
-                floatArray[index++] = x
-                floatArray[index++] = y
-                y += snapSize
+        if (isTeenage) {
+            // Estilo Teenage Engineering: Cruzamentos técnicos (+) de precisão de estúdio
+            val arm = (3.dp.toPx() * s).coerceIn(1.5.dp.toPx(), 4.5.dp.toPx())
+            while (x < size.width + snapSize && index < maxFloats) {
+                var y = startY
+                while (y < size.height + snapSize && index < maxFloats) {
+                    // Linha Horizontal da Cruzeta
+                    floatArray[index++] = x - arm
+                    floatArray[index++] = y
+                    floatArray[index++] = x + arm
+                    floatArray[index++] = y
+                    // Linha Vertical da Cruzeta
+                    floatArray[index++] = x
+                    floatArray[index++] = y - arm
+                    floatArray[index++] = x
+                    floatArray[index++] = y + arm
+                    y += snapSize
+                }
+                x += snapSize
             }
-            x += snapSize
-        }
-        
-        if (index > 0) {
-            drawContext.canvas.nativeCanvas.drawPoints(floatArray, 0, index, paint)
+            if (index > 0) {
+                drawContext.canvas.nativeCanvas.drawLines(floatArray, 0, index, paint)
+            }
+        } else {
+            // Estilo Apple Cupertino: Pontos circulares polidos
+            while (x < size.width + snapSize && index < maxFloats) {
+                var y = startY
+                while (y < size.height + snapSize && index < maxFloats) {
+                    floatArray[index++] = x
+                    floatArray[index++] = y
+                    y += snapSize
+                }
+                x += snapSize
+            }
+            if (index > 0) {
+                drawContext.canvas.nativeCanvas.drawPoints(floatArray, 0, index, paint)
+            }
         }
     }
 }

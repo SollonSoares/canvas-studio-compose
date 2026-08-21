@@ -25,6 +25,8 @@ fun SettingsModal(
     onTitleChange: (String) -> Unit, 
     canvasDimensions: Pair<Int, Int>,
     onDimensionsChange: (Int, Int) -> Unit,
+    themeStyle: String = "cupertino",
+    onThemeStyleChange: (String) -> Unit = {},
     modules: Map<String, Boolean>, 
     onToggleModule: (String, Boolean) -> Unit, 
     config: CanvasConfig = CanvasConfig(),
@@ -54,7 +56,51 @@ fun SettingsModal(
             }
         }
     ) {
-        // 1. Título do Projeto
+        // 1. Estilo do Design System (Apple vs Teenage Engineering)
+        CanvasSectionHeader("Estilo do Design System")
+        Spacer(Modifier.height(CanvasDimens.spaceXs))
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(CanvasDimens.spaceSm)
+        ) {
+            listOf(
+                Triple("cupertino", "🍏 Apple Cupertino", "Sir Jony Ive • Glass"),
+                Triple("teenage", "🎛️ Teenage Eng.", "Jesper Kouthoofd • Synth")
+            ).forEach { (styleId, name, subtitle) ->
+                val isSelected = themeStyle.equals(styleId, ignoreCase = true)
+                OutlinedButton(
+                    onClick = { onThemeStyleChange(styleId) },
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, if (isSelected) colors.accent else colors.borderSubtle),
+                    shape = CanvasDimens.shapeMd,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        backgroundColor = if (isSelected) colors.accent.copy(alpha = 0.14f) else Color.Transparent
+                    )
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(vertical = CanvasDimens.spaceXs)
+                    ) {
+                        Text(
+                            text = name, 
+                            color = if (isSelected) colors.accent else colors.textMain, 
+                            fontSize = 11.5.sp, 
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = subtitle, 
+                            color = if (isSelected) colors.accent.copy(alpha = 0.85f) else colors.textMuted, 
+                            fontSize = 9.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        CanvasDivider()
+
+        // 2. Título do Projeto
         CanvasSectionHeader("Título do Projeto")
         Spacer(Modifier.height(CanvasDimens.spaceXs))
         CanvasTextField(
@@ -65,7 +111,7 @@ fun SettingsModal(
         
         CanvasDivider()
 
-        // 2. Dimensões do Canvas
+        // 3. Dimensões do Canvas
         CanvasSectionHeader("Dimensões do Canvas")
         Spacer(Modifier.height(CanvasDimens.spaceXs))
         
@@ -109,7 +155,7 @@ fun SettingsModal(
 
         CanvasDivider()
 
-        // 3. IA & Comprovantes Bancários (OCR)
+        // 4. IA & Comprovantes Bancários (OCR)
         CanvasSectionHeader("IA & Comprovantes (OCR)")
         Spacer(Modifier.height(CanvasDimens.spaceXs))
         
@@ -143,7 +189,7 @@ fun SettingsModal(
 
         CanvasDivider()
         
-        // 4. Módulos de Blocos Habilitados
+        // 5. Módulos de Blocos Habilitados
         CanvasSectionHeader("Módulos de Blocos")
         Spacer(Modifier.height(CanvasDimens.spaceXs))
         modules.forEach { (type, enabled) ->

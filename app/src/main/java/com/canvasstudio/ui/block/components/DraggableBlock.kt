@@ -124,7 +124,7 @@ fun DraggableBlock(
         isInteracting && !isLocked -> colors.accent.copy(alpha = 0.6f)
         else -> colors.border
     }
-    val borderWidth = if (isSelected) 2.dp else 1.dp
+    val borderWidth = if (isSelected) 2.dp else com.canvasstudio.designsystem.CanvasTheme.shapes.borderWidth
 
     Box(
         modifier = Modifier
@@ -132,8 +132,8 @@ fun DraggableBlock(
                 IntOffset((offsetX * density.density).roundToInt(), (offsetY * density.density).roundToInt()) 
             }
             .size(width.dp, height.dp)
-            .background(colors.bgCard, RoundedCornerShape(10.dp))
-            .border(borderWidth, borderColor, RoundedCornerShape(10.dp))
+            .background(colors.bgCard, com.canvasstudio.designsystem.CanvasTheme.shapes.shapeMd)
+            .border(borderWidth, borderColor, com.canvasstudio.designsystem.CanvasTheme.shapes.shapeMd)
             .pointerInput(key) {
                 detectTapGestures(
                     onDoubleTap = { updatedOnSelect() }
@@ -149,10 +149,20 @@ fun DraggableBlock(
                     .padding(horizontal = 8.dp, vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (com.canvasstudio.designsystem.CanvasTheme.isTeenage) {
+                    // LED indicador de módulo de hardware (Teenage Engineering)
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 4.dp)
+                            .size(5.dp)
+                            .background(if (isSelected) colors.accent else colors.accentVariant.copy(alpha = 0.6f), androidx.compose.foundation.shape.CircleShape)
+                    )
+                }
+
                 // Alça de Arraste (Drag Handle)
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(28.dp)
                         .pointerInput(key, isLocked) {
                             if (isLocked) return@pointerInput
                             detectDragGestures(
@@ -182,7 +192,7 @@ fun DraggableBlock(
                         Icons.Default.DragIndicator, 
                         "Mover bloco", 
                         tint = if (isSelected) colors.accent else colors.textMain.copy(alpha = 0.4f), 
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
                 
@@ -205,36 +215,29 @@ fun DraggableBlock(
                     textStyle = TextStyle(
                         color = if (isSelected) colors.accent else colors.textMain,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = com.canvasstudio.designsystem.CanvasTheme.fontFamily
                     ),
                     cursorBrush = SolidColor(colors.accent),
                     singleLine = true,
                     decorationBox = { inner ->
                         if (currentBlockTitle.isEmpty()) {
-                            Text("Título...", color = colors.textMuted, fontSize = 12.sp)
+                            Text("Título...", color = colors.textMuted, fontSize = 12.sp, fontFamily = com.canvasstudio.designsystem.CanvasTheme.fontFamily)
                         }
                         inner()
                     }
                 )
 
-                // Badge de PIX (Ciano / Teal)
+                // Badge de PIX
                 val isPix = remember(metadata) {
                     metadata?.get("isPix")?.jsonPrimitive?.booleanOrNull == true || block.title.contains("PIX", ignoreCase = true)
                 }
                 if (isPix && canvasConfig.showFinancialBadges) {
-                    Surface(
-                        color = Color(0xFF32BCAD).copy(alpha = 0.18f),
-                        shape = RoundedCornerShape(4.dp),
+                    com.canvasstudio.designsystem.components.CanvasBadge(
+                        text = "PIX",
+                        variant = com.canvasstudio.designsystem.components.CanvasBadgeVariant.Pix,
                         modifier = Modifier.padding(horizontal = 2.dp)
-                    ) {
-                        Text(
-                            text = "PIX",
-                            color = Color(0xFF32BCAD),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                        )
-                    }
+                    )
                 }
 
                 // Badge de Valor Monetário Extraído (Ex: R$ 150,00)
@@ -246,19 +249,11 @@ fun DraggableBlock(
                 }
 
                 if (valorFormatted != null && canvasConfig.showFinancialBadges) {
-                    Surface(
-                        color = Color(0xFF34C759).copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(4.dp),
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    ) {
-                        Text(
-                            text = valorFormatted,
-                            color = Color(0xFF34C759),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                        )
-                    }
+                    com.canvasstudio.designsystem.components.CanvasBadge(
+                        text = valorFormatted,
+                        variant = com.canvasstudio.designsystem.components.CanvasBadgeVariant.Financial,
+                        modifier = Modifier.padding(horizontal = 2.dp)
+                    )
                 }
 
                 if (!isLocked) {

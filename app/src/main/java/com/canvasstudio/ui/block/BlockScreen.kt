@@ -43,6 +43,7 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
 
     val brandTitle by viewModel.brandTitle.collectAsStateWithLifecycle()
     val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
+    val themeStyle by viewModel.themeStyle.collectAsStateWithLifecycle()
     val isGridEnabled by viewModel.isGridEnabled.collectAsStateWithLifecycle()
     val isLocked by viewModel.isLocked.collectAsStateWithLifecycle()
     val canvasDimensions by viewModel.canvasDimensions.collectAsStateWithLifecycle()
@@ -370,6 +371,8 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     onTitleChange = { viewModel.setBrandTitle(it) },
                     canvasDimensions = canvasDimensions,
                     onDimensionsChange = { w, h -> viewModel.setCanvasDimensions(w, h) },
+                    themeStyle = themeStyle,
+                    onThemeStyleChange = { viewModel.setThemeStyle(it) },
                     modules = modules,
                     onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) },
                     config = canvasConfig,

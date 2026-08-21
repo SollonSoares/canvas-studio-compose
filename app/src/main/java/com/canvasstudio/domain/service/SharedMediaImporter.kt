@@ -90,36 +90,60 @@ class SharedMediaImporter(private val context: Context) {
 
         // 2. Se não era PDF ou falhou, tentar como Imagem
         if (savedFileUri == null) {
+            val tempImg = File(context.cacheDir, "temp_img_${System.currentTimeMillis()}.dat")
             try {
                 context.contentResolver.openInputStream(uri)?.use { input ->
-                    val bitmap = BitmapFactory.decodeStream(input)
-                    if (bitmap != null) {
-                        if (autoOcrEnabled) {
-                            extractedOcrText = ReceiptAnalyzer.extractTextFromBitmap(bitmap)
+                    FileOutputStream(tempImg).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                if (tempImg.exists() && tempImg.length() > 0) {
+                    val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeFile(tempImg.absolutePath, boundsOptions)
+                    val rawW = boundsOptions.outWidth
+                    val rawH = boundsOptions.outHeight
+
+                    if (rawW > 0 && rawH > 0) {
+                        var sampleSize = 1
+                        val maxDim = 2048
+                        while (rawW / sampleSize > maxDim * 2 || rawH / sampleSize > maxDim * 2) {
+                            sampleSize *= 2
                         }
 
-                        val maxDim = 1920
-                        val w = bitmap.width
-                        val h = bitmap.height
-                        val scaled = if (w > maxDim || h > maxDim) {
-                            val r = w.toFloat() / h.toFloat()
-                            val (nw, nh) = if (w > h) Pair(maxDim, (maxDim / r).toInt()) else Pair((maxDim * r).toInt(), maxDim)
-                            Bitmap.createScaledBitmap(bitmap, nw, nh, true)
-                        } else bitmap
-
-                        val destFile = File(imagesDir, "img_${System.currentTimeMillis()}.jpg")
-                        FileOutputStream(destFile).use { out ->
-                            scaled.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                        val decodeOptions = BitmapFactory.Options().apply { 
+                            inSampleSize = sampleSize
+                            inPreferredConfig = Bitmap.Config.ARGB_8888
                         }
-                        savedFileUri = "file://${destFile.absolutePath}"
-                        val ratio = h.toFloat() / w.toFloat().coerceAtLeast(0.4f)
-                        blockWidth = 320
-                        blockHeight = (320 * ratio).toInt() + 65
-                        isImage = true
+                        val bitmap = BitmapFactory.decodeFile(tempImg.absolutePath, decodeOptions)
+                        if (bitmap != null) {
+                            if (autoOcrEnabled) {
+                                extractedOcrText = ReceiptAnalyzer.extractTextFromBitmap(bitmap)
+                            }
+
+                            val w = bitmap.width
+                            val h = bitmap.height
+                            val scaled = if (w > maxDim || h > maxDim) {
+                                val r = w.toFloat() / h.toFloat()
+                                val (nw, nh) = if (w > h) Pair(maxDim, (maxDim / r).toInt()) else Pair((maxDim * r).toInt(), maxDim)
+                                Bitmap.createScaledBitmap(bitmap, nw, nh, true)
+                            } else bitmap
+
+                            val destFile = File(imagesDir, "img_${System.currentTimeMillis()}.jpg")
+                            FileOutputStream(destFile).use { out ->
+                                scaled.compress(Bitmap.CompressFormat.JPEG, 88, out)
+                            }
+                            savedFileUri = "file://${destFile.absolutePath}"
+                            val ratio = rawH.toFloat() / rawW.toFloat().coerceAtLeast(0.3f)
+                            blockWidth = 320
+                            blockHeight = (320 * ratio).toInt() + 65
+                            isImage = true
+                        }
                     }
                 }
             } catch (e: Exception) {
                 Log.w("SharedMediaImporter", "Bitmap decode attempt failed: ${e.message}")
+            } finally {
+                tempImg.delete()
             }
         }
 

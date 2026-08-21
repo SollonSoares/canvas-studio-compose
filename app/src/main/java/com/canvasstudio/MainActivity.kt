@@ -28,6 +28,7 @@ import com.canvasstudio.ui.block.BlockViewModel
 import com.canvasstudio.data.local.preferences.UserPreferencesManager
 import com.canvasstudio.data.repository.BlockRepository
 import com.canvasstudio.ui.theme.CanvasStudioTheme
+import com.canvasstudio.ui.splash.SplashScreen
 import kotlinx.coroutines.delay
 
 import android.content.Intent
@@ -46,8 +47,9 @@ class MainActivity : ComponentActivity() {
             val isIncomingShare = intent?.action in listOf(Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE, Intent.ACTION_VIEW)
             var showSplash by remember { mutableStateOf(!isIncomingShare) }
             val isDarkMode by blockViewModel.isDarkMode.collectAsStateWithLifecycle()
+            val themeStyle by blockViewModel.themeStyle.collectAsStateWithLifecycle()
 
-            CanvasStudioTheme(darkTheme = isDarkMode) {
+            CanvasStudioTheme(darkTheme = isDarkMode, themeStyle = themeStyle) {
                 Surface(color = MaterialTheme.colors.background) {
                     if (showSplash) {
                         SplashScreen(onFinished = { showSplash = false })
@@ -139,53 +141,6 @@ class MainActivity : ComponentActivity() {
             }
         } else if (!text.isNullOrBlank()) {
             blockViewModel.importTextShared(text, subject)
-        }
-    }
-}
-
-@Composable
-fun SplashScreen(onFinished: () -> Unit) {
-    var startAnimation by remember { mutableStateOf(false) }
-    val alphaAnim = animateFloatAsState(
-        targetValue = if (startAnimation) 1f else 0f,
-        animationSpec = tween(durationMillis = 1000)
-    )
-
-    LaunchedEffect(Unit) {
-        startAnimation = true
-        delay(2000)
-        onFinished()
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF1C1C1E)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.alpha(alphaAnim.value)
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = null,
-                tint = Color(0xFF0A84FF),
-                modifier = Modifier.size(120.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Canvas Studio",
-                color = Color.White,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Modular & Sync",
-                color = Color(0xFF0A84FF),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
         }
     }
 }

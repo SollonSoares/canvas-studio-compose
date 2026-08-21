@@ -28,6 +28,20 @@ open class UserPreferencesManager(private val context: Context? = null) {
         val CANVAS_WIDTH = intPreferencesKey("canvas_width")
         val CANVAS_HEIGHT = intPreferencesKey("canvas_height")
         val IS_LOCKED = booleanPreferencesKey("is_locked")
+        val THEME_STYLE_KEY = stringPreferencesKey("theme_style")
+    }
+
+    open val themeStyleFlow: Flow<String> by lazy {
+        context?.dataStore?.data
+            ?.catch { exception ->
+                if (exception is IOException) emit(emptyPreferences()) else throw exception
+            }
+            ?.map { it[PreferencesKeys.THEME_STYLE_KEY] ?: "cupertino" }
+            ?: kotlinx.coroutines.flow.flowOf("cupertino")
+    }
+
+    open suspend fun setThemeStyle(style: String) {
+        context?.dataStore?.edit { it[PreferencesKeys.THEME_STYLE_KEY] = style }
     }
 
     open val isLockedFlow: Flow<Boolean> by lazy {

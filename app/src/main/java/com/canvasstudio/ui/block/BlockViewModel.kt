@@ -61,11 +61,18 @@ class BlockViewModel(
     val isLocked = userPreferencesManager.isLockedFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val themeStyle = userPreferencesManager.themeStyleFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "cupertino")
+
     val canvasDimensions = userPreferencesManager.canvasDimensionsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(2000, 2000))
 
     fun toggleDarkMode() = viewModelScope.launch {
         userPreferencesManager.setDarkMode(!isDarkMode.value)
+    }
+
+    fun setThemeStyle(style: String) = viewModelScope.launch {
+        userPreferencesManager.setThemeStyle(style)
     }
 
     fun toggleGrid() = viewModelScope.launch {
@@ -286,6 +293,32 @@ class BlockViewModel(
         } catch (e: Exception) {
             Log.e("CanvasStudio", "Error in importSharedUri: ${e.message}", e)
             _events.emit("Erro ao importar item compartilhado: ${e.message}")
+        }
+    }
+
+    fun updateBlockImageFromUri(block: BlockEntity, uri: Uri, context: android.content.Context) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val imagesDir = java.io.File(context.filesDir, "canvas_images").apply { if (!exists()) mkdirs() }
+            val destFile = java.io.File(imagesDir, "img_${System.currentTimeMillis()}.jpg")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                java.io.FileOutputStream(destFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            if (destFile.exists() && destFile.length() > 0) {
+                val currentObj = try {
+                    Json.parseToJsonElement(block.contentJson).jsonObject.toMutableMap()
+                } catch (e: Exception) {
+                    mutableMapOf()
+                }
+                currentObj["url"] = JsonPrimitive("file://${destFile.absolutePath}")
+                val updatedBlock = block.copy(contentJson = JsonObject(currentObj).toString())
+                blockRepository.updateBlock(updatedBlock)
+                _events.emit("Imagem atualizada com sucesso!")
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            _events.emit("Erro ao atualizar imagem: ${e.message}")
         }
     }
 

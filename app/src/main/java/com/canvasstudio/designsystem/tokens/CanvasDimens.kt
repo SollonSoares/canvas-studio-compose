@@ -1,8 +1,47 @@
 package com.canvasstudio.designsystem.tokens
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+data class CanvasShapes(
+    val shapeXs: Shape,
+    val shapeSm: Shape,
+    val shapeMd: Shape,
+    val shapeLg: Shape,
+    val shapeXl: Shape,
+    val shapeFull: Shape,
+    val borderWidth: Dp,
+    val isMonospace: Boolean,
+    val isTeenage: Boolean
+)
+
+val CupertinoShapes = CanvasShapes(
+    shapeXs = RoundedCornerShape(6.dp),
+    shapeSm = RoundedCornerShape(10.dp),
+    shapeMd = RoundedCornerShape(14.dp),
+    shapeLg = RoundedCornerShape(18.dp),
+    shapeXl = RoundedCornerShape(24.dp),
+    shapeFull = RoundedCornerShape(999.dp),
+    borderWidth = 1.dp,
+    isMonospace = false,
+    isTeenage = false
+)
+
+val TeenageShapes = CanvasShapes(
+    shapeXs = RoundedCornerShape(2.dp),
+    shapeSm = RoundedCornerShape(3.dp),
+    shapeMd = RoundedCornerShape(4.dp),
+    shapeLg = RoundedCornerShape(6.dp),
+    shapeXl = RoundedCornerShape(8.dp),
+    shapeFull = RoundedCornerShape(3.dp),
+    borderWidth = 1.5.dp,
+    isMonospace = true,
+    isTeenage = true
+)
 
 object CanvasDimens {
     // Spacing tokens
@@ -13,7 +52,7 @@ object CanvasDimens {
     val spaceXl = 24.dp
     val space2xl = 32.dp
 
-    // Corner Radii
+    // Corner Radii Default
     val radiusXs = 4.dp
     val radiusSm = 6.dp
     val radiusMd = 8.dp
@@ -22,7 +61,7 @@ object CanvasDimens {
     val radius2xl = 18.dp
     val radiusFull = 999.dp
 
-    // Shapes
+    // Fallback Static Shapes
     val shapeXs = RoundedCornerShape(radiusXs)
     val shapeSm = RoundedCornerShape(radiusSm)
     val shapeMd = RoundedCornerShape(radiusMd)
