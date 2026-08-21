@@ -64,6 +64,12 @@ class BlockViewModel(
     val themeStyle = userPreferencesManager.themeStyleFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "cupertino")
 
+    val galleryBaseUrl = userPreferencesManager.galleryBaseUrlFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "https://sollonsoares.github.io/galeria/imagens/")
+
+    val githubToken = userPreferencesManager.githubTokenFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
     val canvasDimensions = userPreferencesManager.canvasDimensionsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(2000, 2000))
 
@@ -73,6 +79,14 @@ class BlockViewModel(
 
     fun setThemeStyle(style: String) = viewModelScope.launch {
         userPreferencesManager.setThemeStyle(style)
+    }
+
+    fun setGalleryBaseUrl(url: String) = viewModelScope.launch {
+        userPreferencesManager.setGalleryBaseUrl(url)
+    }
+
+    fun setGithubToken(token: String) = viewModelScope.launch {
+        userPreferencesManager.setGithubToken(token)
     }
 
     fun toggleGrid() = viewModelScope.launch {
@@ -632,6 +646,53 @@ class BlockViewModel(
         val state = uiState.value
         val blocks = if (state is BlockUiState.Success) state.blocks else emptyList()
         return com.canvasstudio.features.export_portability.JsonPortabilityService.exportToJson(brandTitle.value, blocks)
+    }
+
+    fun syncToGallery(context: android.content.Context, onShareZip: (java.io.File) -> Unit = {}) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val state = uiState.value
+            val currentBlocks = if (state is BlockUiState.Success) state.blocks else emptyList()
+            if (currentBlocks.none { it.type.equals("image", ignoreCase = true) }) {
+                _events.emit("Nenhuma imagem encontrada no Canvas para sincronizar com a Galeria.")
+                return@launch
+            }
+
+            val syncService = com.canvasstudio.features.export_portability.GallerySyncService(context)
+            val result = syncService.syncBlocksToGallery(
+                blocks = currentBlocks,
+                galleryBaseUrl = galleryBaseUrl.value,
+                githubToken = githubToken.value
+            )
+
+            if (result.syncedCount > 0) {
+                // Atualizar os blocos convertidos no banco de dados Room
+                result.updatedBlocks.forEach { block ->
+                    blockRepository.updateBlock(block)
+                }
+                
+                if (result.githubUploadedCount > 0) {
+                    val msg = "🚀 ${result.githubUploadedCount} imagem(ns) enviadas e comitadas no GitHub com sucesso!"
+                    _events.emit(msg)
+                } else if (result.errorMessages.isNotEmpty()) {
+                    val errorSummary = result.errorMessages.firstOrNull() ?: ""
+                    _events.emit("URLs atualizadas, mas aviso do GitHub: $errorSummary")
+                    if (result.zipFile != null) {
+                        onShareZip(result.zipFile)
+                    }
+                } else {
+                    val msg = "${result.syncedCount} imagem(ns) preparadas para a Galeria! URLs públicas geradas."
+                    _events.emit(msg)
+                    if (result.zipFile != null) {
+                        onShareZip(result.zipFile)
+                    }
+                }
+            } else {
+                _events.emit("Todas as imagens do Canvas já possuem links públicos da Galeria!")
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            _events.emit("Erro ao sincronizar galeria: ${e.message}")
+        }
     }
 
     fun loadDefaultTemplate(context: android.content.Context, clearFirst: Boolean = false) = viewModelScope.launch {

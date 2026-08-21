@@ -29,6 +29,34 @@ open class UserPreferencesManager(private val context: Context? = null) {
         val CANVAS_HEIGHT = intPreferencesKey("canvas_height")
         val IS_LOCKED = booleanPreferencesKey("is_locked")
         val THEME_STYLE_KEY = stringPreferencesKey("theme_style")
+        val GALLERY_BASE_URL_KEY = stringPreferencesKey("gallery_base_url")
+        val GITHUB_TOKEN_KEY = stringPreferencesKey("github_token")
+    }
+
+    open val githubTokenFlow: Flow<String> by lazy {
+        context?.dataStore?.data
+            ?.catch { exception ->
+                if (exception is IOException) emit(emptyPreferences()) else throw exception
+            }
+            ?.map { it[PreferencesKeys.GITHUB_TOKEN_KEY] ?: "" }
+            ?: kotlinx.coroutines.flow.flowOf("")
+    }
+
+    open suspend fun setGithubToken(token: String) {
+        context?.dataStore?.edit { it[PreferencesKeys.GITHUB_TOKEN_KEY] = token }
+    }
+
+    open val galleryBaseUrlFlow: Flow<String> by lazy {
+        context?.dataStore?.data
+            ?.catch { exception ->
+                if (exception is IOException) emit(emptyPreferences()) else throw exception
+            }
+            ?.map { it[PreferencesKeys.GALLERY_BASE_URL_KEY] ?: "https://sollonsoares.github.io/galeria/imagens/" }
+            ?: kotlinx.coroutines.flow.flowOf("https://sollonsoares.github.io/galeria/imagens/")
+    }
+
+    open suspend fun setGalleryBaseUrl(url: String) {
+        context?.dataStore?.edit { it[PreferencesKeys.GALLERY_BASE_URL_KEY] = url }
     }
 
     open val themeStyleFlow: Flow<String> by lazy {

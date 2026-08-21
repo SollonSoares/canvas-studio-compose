@@ -34,6 +34,10 @@ fun SettingsModal(
     onToggleFinancialBadges: (Boolean) -> Unit = {},
     onTogglePartyDetails: (Boolean) -> Unit = {},
     onToggleFitAspectRatio: (Boolean) -> Unit = {},
+    galleryBaseUrl: String = "https://sollonsoares.github.io/galeria/imagens/",
+    onGalleryBaseUrlChange: (String) -> Unit = {},
+    githubToken: String = "",
+    onGithubTokenChange: (String) -> Unit = {},
     onDismiss: () -> Unit, 
     colors: CanvasColors = CanvasTheme.colors
 ) {
@@ -111,7 +115,26 @@ fun SettingsModal(
         
         CanvasDivider()
 
-        // 3. Dimensões do Canvas
+        // 3. Integração com a Galeria Web (GitHub Pages)
+        CanvasSectionHeader("Integração com Galeria Web (GitHub)")
+        Spacer(Modifier.height(CanvasDimens.spaceXs))
+        CanvasTextField(
+            label = "URL Base da Galeria",
+            value = galleryBaseUrl,
+            onValueChange = onGalleryBaseUrlChange,
+            placeholder = "https://sollonsoares.github.io/galeria/imagens/"
+        )
+        Spacer(Modifier.height(CanvasDimens.spaceSm))
+        CanvasTextField(
+            label = "GitHub Access Token (PAT)",
+            value = githubToken,
+            onValueChange = onGithubTokenChange,
+            placeholder = "ghp_... (para commits diretos na galeria)"
+        )
+
+        CanvasDivider()
+
+        // 4. Dimensões do Canvas
         CanvasSectionHeader("Dimensões do Canvas")
         Spacer(Modifier.height(CanvasDimens.spaceXs))
         
@@ -138,13 +161,13 @@ fun SettingsModal(
                             Text(
                                 text = name, 
                                 color = if (isSelected) colors.accent else colors.textMain, 
-                                fontSize = 11.sp, 
-                                fontWeight = FontWeight.Bold
+                                fontSize = 12.sp, 
+                                fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "${w}x${h}", 
-                                color = if (isSelected) colors.accent.copy(0.8f) else colors.textMuted, 
-                                fontSize = 9.5.sp
+                                text = "${w}x${h}px", 
+                                color = if (isSelected) colors.accent.copy(alpha = 0.8f) else colors.textMuted, 
+                                fontSize = 10.sp
                             )
                         }
                     }
@@ -155,27 +178,27 @@ fun SettingsModal(
 
         CanvasDivider()
 
-        // 4. IA & Comprovantes Bancários (OCR)
-        CanvasSectionHeader("IA & Comprovantes (OCR)")
+        // 5. Inteligência OCR & Finanças (ML Kit)
+        CanvasSectionHeader("Inteligência OCR & Comprovantes")
         Spacer(Modifier.height(CanvasDimens.spaceXs))
         
         CanvasToggle(
-            label = "OCR On-Device Automático",
-            description = "Extrai valores, datas e partes via Google ML Kit",
+            label = "Auto OCR de Comprovantes",
+            description = "Extrai valores, pagador, recebedor e PIX automaticamente",
             checked = config.autoOcrEnabled,
             onCheckedChange = onToggleAutoOcr
         )
-        
+
         CanvasToggle(
-            label = "Badges Financeiros nos Cards",
-            description = "Exibe tags visuais de R$ e PIX no topo do bloco",
+            label = "Exibir Badges Financeiros",
+            description = "Mostra etiquetas de valor e tipo nos blocos do Canvas",
             checked = config.showFinancialBadges,
             onCheckedChange = onToggleFinancialBadges
         )
 
         CanvasToggle(
-            label = "Detalhes de Origem/Destino",
-            description = "Exibe De (Pagador) e Para (Destinatário)",
+            label = "Exibir Detalhes de Partes",
+            description = "Mostra informações 'De', 'Para' e instituição bancária",
             checked = config.showPartyDetails,
             onCheckedChange = onTogglePartyDetails
         )
@@ -189,7 +212,7 @@ fun SettingsModal(
 
         CanvasDivider()
         
-        // 5. Módulos de Blocos Habilitados
+        // 6. Módulos de Blocos Habilitados
         CanvasSectionHeader("Módulos de Blocos")
         Spacer(Modifier.height(CanvasDimens.spaceXs))
         modules.forEach { (type, enabled) ->

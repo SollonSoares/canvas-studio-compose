@@ -44,6 +44,8 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
     val brandTitle by viewModel.brandTitle.collectAsStateWithLifecycle()
     val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
     val themeStyle by viewModel.themeStyle.collectAsStateWithLifecycle()
+    val galleryBaseUrl by viewModel.galleryBaseUrl.collectAsStateWithLifecycle()
+    val githubToken by viewModel.githubToken.collectAsStateWithLifecycle()
     val isGridEnabled by viewModel.isGridEnabled.collectAsStateWithLifecycle()
     val isLocked by viewModel.isLocked.collectAsStateWithLifecycle()
     val canvasDimensions by viewModel.canvasDimensions.collectAsStateWithLifecycle()
@@ -231,6 +233,26 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     galleryPickerLauncher.launch("image/*")
                     scope.launch { scaffoldState.drawerState.close() }
                 },
+                onExportToGallery = {
+                    viewModel.syncToGallery(context) { zipFile ->
+                        try {
+                            val uri = androidx.core.content.FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",
+                                zipFile
+                            )
+                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "application/zip"
+                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartilhar Imagens da Galeria (ZIP)"))
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    scope.launch { scaffoldState.drawerState.close() }
+                },
                 selectedBlock = selectedBlock,
                 onDeselectBlock = { viewModel.selectBlock(null) },
                 onUpdateTitle = { viewModel.updateSelectedTitle(it) },
@@ -373,6 +395,10 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     onDimensionsChange = { w, h -> viewModel.setCanvasDimensions(w, h) },
                     themeStyle = themeStyle,
                     onThemeStyleChange = { viewModel.setThemeStyle(it) },
+                    galleryBaseUrl = galleryBaseUrl,
+                    onGalleryBaseUrlChange = { viewModel.setGalleryBaseUrl(it) },
+                    githubToken = githubToken,
+                    onGithubTokenChange = { viewModel.setGithubToken(it) },
                     modules = modules,
                     onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) },
                     config = canvasConfig,

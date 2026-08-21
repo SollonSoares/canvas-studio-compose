@@ -56,6 +56,7 @@ fun SidebarContent(
     onExportPdf: () -> Unit,
     onSharePdf: () -> Unit = {},
     onPickGalleryImage: () -> Unit = {},
+    onExportToGallery: () -> Unit = {},
     selectedBlock: BlockEntity? = null,
     onDeselectBlock: () -> Unit = {},
     onUpdateTitle: (String) -> Unit = {},
@@ -573,6 +574,7 @@ fun SidebarContent(
                     SidebarButton("Compartilhar", Icons.Rounded.Share, colors.accent, onClick = onSharePdf)
                 }
             }
+            SidebarButton("Exportar para Galeria", Icons.Rounded.CloudUpload, colors.accent, onClick = onExportToGallery)
         }
 
         // Preferências & Footer
