@@ -4,7 +4,7 @@
 ### *Next-Gen Reactive Infinite Canvas Engine & On-Device Intelligence*
 
 <p align="center">
-  <strong>O estado da arte em engenharia visual e arquitetura reativa para Android. Uma plataforma de workspace infinito com renderização acelerada por GPU, Design System estrito, pipeline de inteligência On-Device (Google ML Kit OCR) e portabilidade bidirecional de dados.</strong>
+  <strong>O estado da arte em engenharia visual, arquitetura reativa e design industrial para Android. Uma plataforma de workspace espacial infinito com renderização acelerada por GPU, Design System de Duplo Universo (Apple vs Teenage Engineering), pipeline de IA On-Device (Google ML Kit OCR), automação de commits na nuvem (GitHub REST API) e portabilidade bidirecional de dados.</strong>
 </p>
 
 <p align="center">
@@ -13,18 +13,21 @@
   <img src="https://img.shields.io/badge/UI_Toolkit-Jetpack_Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose">
   <img src="https://img.shields.io/badge/Architecture-Clean_%26_Feature--Flows-34C759?style=for-the-badge" alt="Clean Architecture">
   <img src="https://img.shields.io/badge/Intelligence-Google_ML_Kit-FF9500?style=for-the-badge&logo=google&logoColor=white" alt="ML Kit">
+  <img src="https://img.shields.io/badge/Cloud_Sync-GitHub_REST_API-24292E?style=for-the-badge&logo=github&logoColor=white" alt="GitHub API">
 </p>
 
 ---
 
 ### 📑 Sumário Executivo & Arquitetural
 [1. Visão Geral](#-visão-geral-do-sistema) • 
-[2. Design System Centralizado](#-design-system-centralizado) • 
-[3. Arquitetura Modular por Flows](#-arquitetura-modular-por-flows) • 
-[4. Motores de Engenharia & Performance](#-motores-de-engenharia--performance) • 
-[5. Pipeline de IA & OCR de Comprovantes](#-pipeline-de-ia--ocr-on-device) • 
-[6. Portabilidade & Esquema JSON](#-portabilidade-e-esquema-de-dados) • 
-[7. Execução e Build](#-guia-de-execução-e-engenharia)
+[2. Design System & Duplo Universo](#-design-system-centralizado--duplo-universo-visual) • 
+[3. Splash Screen Animada Cinematográfica](#-splash-screen-animada-cinematográfica) • 
+[4. Arquitetura Modular por Flows](#-arquitetura-modular-por-flows) • 
+[5. Motores de Engenharia & Performance GPU](#-motores-de-engenharia--performance-gpu) • 
+[6. Pipeline de IA & OCR On-Device](#-pipeline-de-ia--ocr-on-device) • 
+[7. Automação Cloud & Sync GitHub REST API](#-automação-cloud--sync-direto-github-rest-api) • 
+[8. Portabilidade & Esquema JSON v2.0.0](#-portabilidade-e-esquema-de-dados-v200) • 
+[9. Guia de Execução e Build](#-guia-de-execução-e-engenharia)
 
 </div>
 
@@ -32,39 +35,57 @@
 
 ## 🌟 Visão Geral do Sistema
 
-O **Canvas Studio Compose** é um ambiente de alta precisão projetado para manipulação espacial livre de blocos (texto rico, mídia de alta resolução, gráficos multieixo e comprovantes financeiros). Construído 100% sobre **Jetpack Compose**, o sistema elimina completamente o overhead de Views legadas através de transformações diretas em GPU e um micro-kernel reativo impulsionado por Kotlin Coroutines e StateFlow.
+O **Canvas Studio Compose** é um ambiente de computação espacial bidimensional de alta precisão projetado para manipulação livre de blocos (texto rico com markdown, mídia de alta resolução, gráficos vetoriais multieixo e comprovantes financeiros). Construído 100% sobre **Jetpack Compose**, o sistema elimina completamente o overhead de Views legadas através de transformações diretas em GPU e um micro-kernel reativo impulsionado por Kotlin Coroutines e StateFlow.
 
 ### 💎 Principais Diferenciais Técnicos:
-* **Renderização 60/120 FPS sem Recomposição Excessiva**: Transformações espaciais (Pan e Zoom de `0.15x` a `3.0x`) desacopladas da fase de layout via `graphicsLayer`.
-* **Design System Atômico Estrito**: Interface com tokens unificados para Modo Claro e Escuro, tipografia proporcional e componentes reutilizáveis padronizados (`CanvasModal`, `CanvasToggle`, `CanvasButton`, `CanvasTextField`, `CanvasCard`).
+* **Renderização 60/120 FPS cravados**: Transformações espaciais (Pan e Zoom infinito de `0.15x` a `3.0x`) desacopladas da fase de layout via `graphicsLayer`.
+* **Design System de Duplo Universo Estético**: Metamorfose completa em tempo real entre o minimalismo fluido da **Apple Cupertino (Sir Jony Ive)** e a engenharia física e tátil da **Teenage Engineering (Jesper Kouthoofd)**.
 * **On-Device Vision AI (OCR)**: Análise em tempo real de comprovantes bancários (PIX, TED, Tributos, Boletos) via **Google ML Kit Vision**, com extração inteligente de valores, partes (`De`/`Para`), instituição e timestamp.
-* **Persistência I/O Otimizada**: Prevenção do limite de 2MB do `CursorWindow` do SQLite através do salvamento atômico em disco de arquivos locais (`file:///`) com metadados estruturados em Room.
+* **Automação de Commits Diretos no GitHub**: Sincronização e upload automático de imagens para o repositório [`SollonSoares/galeria`](https://github.com/SollonSoares/galeria) via GitHub Contents API, gerando URLs públicas no GitHub Pages em segundos.
+* **Shield de Memória & SQLite Anti-Crash**: Eliminação do estouro de `CursorWindow` (2MB) através do salvamento atômico em disco de arquivos locais (`file:///`) com *downsampling* inteligente de fotos pesadas da câmera (`inSampleSize`).
 
 ---
 
-## 🎨 Design System Centralizado
+## 🎨 Design System Centralizado & Duplo Universo Visual
 
 Todo o ecossistema visual do aplicativo é orquestrado pelo pacote `com.canvasstudio.designsystem`, provido via `CompositionLocalProvider` e desacoplado de regras de negócio.
 
-### 🎭 Tokens de Cores Semânticas (`CanvasColors`)
+Ao alternar o tema nas **Configurações**, todo o aplicativo sofre uma **transformação estrutural de geometria, tipografia, bordas e grade**:
 
-| Token Semântico | Dark Theme (`DarkCanvasColors`) | Light Theme (`LightCanvasColors`) | Finalidade de Uso |
-| :--- | :--- | :--- | :--- |
-| **`accent`** | `#0A84FF` *(Apple Blue)* | `#007AFF` *(Apple Blue)* | Ações primárias, foco e seleção ativa. |
-| **`accentVariant`** | `#5AC8FA` | `#0056B3` | Destaques secundários e gradientes. |
-| **`bgMain`** | `#000000` *(Pure Black)* | `#F2F2F7` *(System Light)* | Palco de trabalho e viewport infinito. |
-| **`bgMenu` / `bgCard`** | `#1C1C1E` / `#2C2C2E` | `#FFFFFF` | Superfícies elevadas, drawers e modais. |
-| **`bgInput`** | `#26767680` | `#0F000000` | Campos de entrada e backgrounds de controle. |
-| **`badgePix`** | `#32BCAD` *(Teal/Ciano)* | `#00A896` | Identificação visual de transações PIX. |
-| **`success`** | `#34C759` *(System Green)* | `#28A745` | Valores monetários e validações positivas. |
-| **`danger`** | `#FF453A` *(System Red)* | `#FF3B30` | Bloqueio, exclusão e alertas críticos. |
+```
+┌───────────────────────────┬────────────────────────────────────────────────────────┐
+│ ATRIBUTO DE ENGENHARIA    │ 🍏 1. APPLE CUPERTINO          │ 🎛️ 2. TEENAGE ENGINEERING      │
+├───────────────────────────┼────────────────────────────────┼───────────────────────┤
+│ Autor Inspirador          │ Sir Jony Ive                   │ Jesper Kouthoofd      │
+│ Filosofia                 │ Vidro, fluidez e pureza        │ Hardware mecânico e tátil       │
+│ Tipografia                │ Sans-Serif Proporcional        │ Monospaçada / DIN Técnica      │
+│ Geometria dos Blocos      │ Squircles suaves (14dp - 24dp) │ Cantos usinados retos (4dp)   │
+│ Bordas dos Blocos         │ Hairline translúcida (1dp)     │ Chanfro sólido usinado (1.5dp) │
+│ Grade do Canvas           │ Pontos circulares polidos      │ Cruzetas técnicas de estúdio (+)|
+│ Badges Financeiros        │ Cápsulas ovais fluidas (999dp) │ Brackets de LED [ PIX ] [ R$ ] │
+│ Identificador do Módulo   │ Discreto e minimalista         │ LED luminoso indicador tátil  │
+│ Acento Primário           │ #0A84FF / #007AFF (Apple Blue) │ #FF4500 (OP-1 Signal Orange)  │
+└───────────────────────────┴────────────────────────────────┴───────────────────────┘
+```
 
 ### 🧱 Componentes Atômicos Padronizados:
 * **`CanvasModal`**: Diálogo em 3 camadas (cabeçalho fixo com botão de fechar, corpo com rolagem independente e rodapé de ações ancorado que nunca sobrepõe o conteúdo).
-* **`CanvasToggle`**: Switch customizado com thumb branco, trilha no azul de destaque (`colors.accent`) e escala uniforme de `0.85f`.
-* **`CanvasButton`**: Botões tipados (`Primary`, `Secondary`, `Outlined`, `Ghost`, `Danger`) com ripple nativo e cantos arredondados.
+* **`CanvasToggle`**: Switch customizado com thumb branco, trilha no tom de destaque (`colors.accent`) e escala uniforme de `0.85f`.
+* **`CanvasButton`**: Botões tipados (`Primary`, `Secondary`, `Outlined`, `Ghost`, `Danger`) com ripple nativo e cantos estruturados.
 * **`CanvasTextField`**: Entradas de texto com foco reativo e estados de erro.
-* **`CanvasBadge`**: Pílulas de alta legibilidade para estados financeiros e tags.
+* **`CanvasBadge`**: Pílulas de alta legibilidade para estados financeiros e tags com adaptação visual por tema.
+
+---
+
+## 🎬 Splash Screen Animada Cinematográfica
+
+O componente [`SplashScreen.kt`](app/src/main/java/com/canvasstudio/ui/splash/SplashScreen.kt) oferece uma experiência visual de alta fidelidade ao inicializar o aplicativo:
+
+1. **Halo de Luz Ambiente (*Pulse Glow*)**: Brilho radial que pulsa suavemente no centro com `Brush.radialGradient`, criando profundidade espacial na tela OLED.
+2. **Grade Reativa em Background**: Revela a matriz de fundo em transição suave (pontos circulares na Apple ou cruzetas técnicas na Teenage Engineering).
+3. **Monograma Central com Física de Mola**: O logo surge com dinâmica de mola orgânica (`Spring.DampingRatioMediumBouncy`) envolto por um anel com gradiente angular rotativo.
+4. **Expansão Tipográfica (*Letter-Tracking Reveal*)**: O título `CANVAS STUDIO` surge com expansão de espaçamento entre letras de `0.5sp` para `3.5sp`.
+5. **Transição de Saída Fluida (*Seamless Exit*)**: Ao carregar, a tela expande suavemente para `1.08x` com fade-out gradual, revelando o Canvas perfeitamente.
 
 ---
 
@@ -76,20 +97,22 @@ O sistema adota os princípios de **Clean Architecture** e **Modular Feature-Dri
 graph TD
     subgraph UI_LAYER ["🖥️ PRESENTATION LAYER (Jetpack Compose)"]
         CS["CanvasScreen.kt<br/><i>(Viewport Coordinator & GPU Layer)</i>"]
-        SM["SettingsModal.kt<br/><i>(Configurações & Feature Toggles)</i>"]
+        SM["SettingsModal.kt<br/><i>(Configurações, GitHub Token & Temas)</i>"]
         DB["DraggableBlock.kt<br/><i>(Atom Host com Gestos Touch)</i>"]
-        IN["SidebarContent.kt<br/><i>(Inspetor de Propriedades & Ações)</i>"]
+        IN["SidebarContent.kt<br/><i>(Inspetor de Propriedades & Portabilidade)</i>"]
+        SP["SplashScreen.kt<br/><i>(Cinematic Animated Launch Engine)</i>"]
     end
 
     subgraph DESIGN_SYSTEM ["🎨 DESIGN SYSTEM (com.canvasstudio.designsystem)"]
-        DS_Tokens["Tokens: Colors, Dimens, Typography"]
+        DS_Tokens["Tokens: Colors, Shapes, Dimens, Typography"]
         DS_Components["Components: Modal, Toggle, Button, TextField, Badge"]
-        DS_Theme["CanvasStudioTheme (CompositionLocal)"]
+        DS_Theme["CanvasStudioTheme (CompositionLocal Dual-Engine)"]
     end
 
     subgraph FEATURE_FLOWS ["🧩 FEATURE FLOWS (com.canvasstudio.features)"]
         OCR_FLOW["ocr_importer<br/><i>(SharedMediaImporter & ReceiptAnalyzer)</i>"]
         PORT_FLOW["export_portability<br/><i>(JsonPortabilityService & PdfExporter)</i>"]
+        GH_FLOW["github_sync<br/><i>(GitHubApiService & GallerySyncService)</i>"]
     end
 
     subgraph DOMAIN_CORE ["🧠 DOMAIN & STATE (Unidirectional Data Flow)"]
@@ -115,7 +138,7 @@ graph TD
 
 ---
 
-## 🔬 Motores de Engenharia & Performance
+## 🔬 Motores de Engenharia & Performance GPU
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -162,7 +185,7 @@ sequenceDiagram
     alt Arquivo PDF
         Importer->>Importer: Renderiza Página 0 via PdfRenderer (ARGB_8888)
     else Imagem JPG/PNG
-        Importer->>Importer: Decodifica Bitmap com downscaling inteligente
+        Importer->>Importer: Decodifica Bitmap com downscaling seguro (inSampleSize)
     end
     Importer->>Importer: Salva arquivo em context.filesDir/canvas_images
     Importer->>MLKit: Processa Bitmap com TextRecognizer
@@ -182,9 +205,34 @@ sequenceDiagram
 
 ---
 
-## 📄 Portabilidade e Esquema de Dados
+## 🌐 Automação Cloud & Sync Direto (GitHub REST API)
 
-O Canvas Studio adota portabilidade bidirecional compatível com a Web e outros sistemas analíticos através do serviço isolado `JsonPortabilityService`.
+O módulo [`GitHubApiService.kt`](app/src/main/java/com/canvasstudio/features/export_portability/GitHubApiService.kt) permite o envio e commit direto de imagens do celular para o repositório da sua Galeria Web:
+
+```mermaid
+sequenceDiagram
+    participant User as 👤 Usuário (App)
+    participant UI as 📱 Sidebar (Exportar para Galeria)
+    participant Sync as ⚡ GallerySyncService
+    participant GH as 🐙 GitHub REST API (Contents API)
+    participant Repo as 📁 Repositório SollonSoares/galeria/imagens/
+    participant Web as 🌐 GitHub Pages (Web)
+
+    User->>UI: Toca em "Exportar para Galeria"
+    UI->>Sync: syncBlocksToGallery(blocks, token)
+    Sync->>GH: PUT /repos/SollonSoares/galeria/contents/imagens/{file}.jpg
+    GH->>Repo: Commit automático na branch 'main'
+    GH-->>Sync: 201 Created (SHA + html_url)
+    Sync->>UI: Atualiza blocos para https://sollonsoares.github.io/galeria/imagens/{file}.jpg
+    UI-->>User: "🚀 N imagem(ns) enviadas e comitadas no GitHub com sucesso!"
+    Repo-->>Web: GitHub Pages serve a imagem em segundos
+```
+
+---
+
+## 📄 Portabilidade e Esquema de Dados (v2.0.0)
+
+O Canvas Studio adota portabilidade bidirecional compatível com a Web através do serviço isolado `JsonPortabilityService`.
 
 ### 📑 Esquema JSON Exportado (`JSON Export`):
 Todos os valores financeiros, metadados e o **texto bruto completo do OCR (`rawText`)** são preservados diretamente dentro do array `campos` de cada bloco:
@@ -193,7 +241,7 @@ Todos os valores financeiros, metadados e o **texto bruto completo do OCR (`rawT
 {
   "metadata": {
     "versao": "2.0.0",
-    "timestamp": 1787295483878,
+    "timestamp": 1787303429050,
     "brand": "Canvas Studio"
   },
   "blocos": {
@@ -204,7 +252,7 @@ Todos os valores financeiros, metadados e o **texto bruto completo do OCR (`rawT
       "height": 480,
       "type": "image",
       "title": "Pix - João Silva",
-      "url": "file:///data/user/0/com.canvasstudio/files/canvas_images/comprovante_123.jpg",
+      "url": "https://sollonsoares.github.io/galeria/imagens/comprovante_pix_1.jpg",
       "campos": [
         {
           "html": "<div><b>Valor:</b> R$ 150,00</div><div><b>Realizado em:</b> 21/08/2026 14:30</div><div><b>De (Pagador):</b> SOLLON SOARES</div><div><b>Para (Destinatário):</b> JOAO DA SILVA</div><div><b>Instituição:</b> NU PAGAMENTOS S.A.</div>",
