@@ -3,458 +3,184 @@ package com.canvasstudio.ui.block
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.canvasstudio.data.local.entity.BlockEntity
+import com.canvasstudio.designsystem.CanvasTheme
 import com.canvasstudio.ui.block.components.*
 import com.canvasstudio.ui.block.utils.PdfExporter
-import com.canvasstudio.ui.theme.CanvasTheme
 import kotlinx.coroutines.launch
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 @Composable
-fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> Unit) {
-    val colors = CanvasTheme.colors
-    val scaffoldState = rememberScaffoldState()
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+fun BlockScreen(
+    viewModel: BlockViewModel,
+    uiState: BlockUiState = viewModel.uiState.collectAsStateWithLifecycle().value,
+    onBack: () -> Unit = {}
+) {
+    val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
+    val isLocked by viewModel.isLocked.collectAsStateWithLifecycle()
+    val isGridEnabled by viewModel.isGridEnabled.collectAsStateWithLifecycle()
+    val selectedBlockId by viewModel.selectedBlockId.collectAsStateWithLifecycle()
+    val brandTitle by viewModel.brandTitle.collectAsStateWithLifecycle()
+    val canvasDimensions by viewModel.canvasDimensions.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val appliedQuery by viewModel.appliedQuery.collectAsStateWithLifecycle()
-
-    val brandTitle by viewModel.brandTitle.collectAsStateWithLifecycle()
-    val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
     val themeStyle by viewModel.themeStyle.collectAsStateWithLifecycle()
-    val galleryBaseUrl by viewModel.galleryBaseUrl.collectAsStateWithLifecycle()
-    val githubToken by viewModel.githubToken.collectAsStateWithLifecycle()
-    val isGridEnabled by viewModel.isGridEnabled.collectAsStateWithLifecycle()
-    val isLocked by viewModel.isLocked.collectAsStateWithLifecycle()
-    val canvasDimensions by viewModel.canvasDimensions.collectAsStateWithLifecycle()
-    val selectedBlockId by viewModel.selectedBlockId.collectAsStateWithLifecycle()
-    val selectedBlock by viewModel.selectedBlock.collectAsStateWithLifecycle()
-    var showSettingsModal by remember { mutableStateOf(false) }
-
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            try {
-                context.contentResolver.openInputStream(it)?.use { inputStream ->
-                    val reader = BufferedReader(InputStreamReader(inputStream))
-                    val content = reader.readText()
-                    viewModel.importFromJson(content)
-                }
-            } catch (e: Exception) {
-                scope.launch {
-                    scaffoldState.snackbarHostState.showSnackbar("Erro ao ler arquivo: ${e.message}")
-                }
-            }
-        }
-    }
-
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri: Uri? ->
-        uri?.let {
-            try {
-                val jsonString = viewModel.exportToJson()
-                context.contentResolver.openOutputStream(it)?.use { outputStream ->
-                    outputStream.write(jsonString.toByteArray())
-                }
-                scope.launch {
-                    scaffoldState.snackbarHostState.showSnackbar("Canvas exportado com sucesso!")
-                }
-            } catch (e: Exception) {
-                scope.launch {
-                    scaffoldState.snackbarHostState.showSnackbar("Erro ao exportar arquivo: ${e.message}")
-                }
-            }
-        }
-    }
-
-    val pdfExportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/pdf")
-    ) { uri: Uri? ->
-        uri?.let {
-            try {
-                if (uiState is BlockUiState.Success) {
-                    val blocks = uiState.blocks
-                    val (w, h) = canvasDimensions
-                    context.contentResolver.openOutputStream(it)?.use { outputStream ->
-                        PdfExporter.exportCanvasToPdf(context, blocks, w, h, outputStream)
-                    }
-                    scope.launch {
-                        scaffoldState.snackbarHostState.showSnackbar("PDF exportado com sucesso!")
-                    }
-                }
-            } catch (e: Exception) {
-                scope.launch {
-                    scaffoldState.snackbarHostState.showSnackbar("Erro ao exportar PDF: ${e.message}")
-                }
-            }
-        }
-    }
-
-    val galleryPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            viewModel.importSharedUri(context, it)
-        }
-    }
 
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+    var showSettingsModal by remember { mutableStateOf(false) }
+
+    val scaffoldState = rememberScaffoldState()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val colors = CanvasTheme.colors
+
+    val jsonImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            try {
+                val json = context.contentResolver.openInputStream(it)?.bufferedReader()?.use { reader -> reader.readText() }
+                if (json != null) viewModel.importFromJson(json)
+            } catch (e: Exception) {}
+        }
+    }
+    val jsonExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
+        uri?.let {
+            try {
+                val json = viewModel.exportToJson()
+                context.contentResolver.openOutputStream(it)?.use { out -> out.write(json.toByteArray()) }
+            } catch (e: Exception) {}
+        }
+    }
+    val pdfExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri: Uri? ->
+        uri?.let { destUri ->
+            if (uiState is BlockUiState.Success) {
+                try {
+                    context.contentResolver.openOutputStream(destUri)?.use { out ->
+                        val (w, h) = canvasDimensions
+                        PdfExporter.exportCanvasToPdf(context, uiState.blocks, w, h, out)
+                    }
+                } catch (e: Exception) {}
+            }
+        }
+    }
+    val galleryPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { viewModel.importSharedUri(context, it) }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { msg ->
+            scaffoldState.snackbarHostState.showSnackbar(msg)
+        }
+    }
+
+    val selectedBlock = remember(uiState, selectedBlockId) {
+        (uiState as? BlockUiState.Success)?.blocks?.find { it.id == selectedBlockId }
+    }
 
     Scaffold(
         scaffoldState = scaffoldState,
-        drawerGesturesEnabled = scaffoldState.drawerState.isOpen,
         topBar = {
-            TopAppBar(
-                title = { Text(brandTitle, color = colors.textMain, fontWeight = FontWeight.Bold) },
-                backgroundColor = colors.bgMenu,
-                actions = {
-                    IconButton(onClick = { showSettingsModal = true }) {
-                        Icon(Icons.Default.Settings, "Configurações", tint = colors.accent)
-                    }
-                    IconButton(onClick = { scale = 1f; offset = Offset.Zero }) {
-                        Icon(Icons.Default.FilterCenterFocus, "Resetar Visão", tint = colors.accent)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { scope.launch { scaffoldState.drawerState.open() } }) {
-                        Icon(Icons.Default.Menu, "Menu", tint = colors.accent)
-                    }
-                }
+            BlockScreenTopBar(
+                brandTitle = brandTitle,
+                onOpenDrawer = { scope.launch { scaffoldState.drawerState.open() } },
+                onOpenSettings = { showSettingsModal = true },
+                onResetVision = { scale = 1f; offset = Offset.Zero },
+                colors = colors
             )
         },
-        floatingActionButton = {
-            val density = LocalDensity.current
-            FloatingActionButton(
-                onClick = {
-                    val spawnX = ((-offset.x / density.density) + 200f) / scale
-                    val spawnY = ((-offset.y / density.density) + 200f) / scale
-                    viewModel.insertBlock(BlockEntity(0, 0, "Novo Bloco", "text", spawnX, spawnY, 220, 180, 
-                        "{\"text\":\"Novo texto aqui...\", \"fontSize\": 13, \"align\": \"left\"}"))
-                },
-                backgroundColor = colors.accent
-            ) { Icon(Icons.Default.Add, "Adicionar", tint = Color.White) }
-        },
-        drawerContent = { 
-            val modules by viewModel.modulesState.collectAsState()
-            val density = LocalDensity.current
-            SidebarContent(
-                q = searchQuery, 
-                onQ = { viewModel.setSearchQuery(it) }, 
-                onSearch = { 
-                    viewModel.applySearch()
-                    scope.launch { scaffoldState.drawerState.close() }
-                },
-                onImp = { importLauncher.launch("*/*") }, 
-                onExp = { exportLauncher.launch("canvas_export.json") },
-                onClr = { 
-                    viewModel.clearCanvas()
-                    scope.launch { scaffoldState.drawerState.close() }
-                },
-                onOrg = { 
-                    viewModel.autoOrganizeBlocks()
-                    scope.launch { scaffoldState.drawerState.close() }
-                },
-                modules = modules,
-                onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) },
+        drawerContent = {
+            BlockDrawerWrapper(
+                viewModel = viewModel,
+                uiState = uiState,
+                searchQuery = searchQuery,
+                brandTitle = brandTitle,
                 isDarkMode = isDarkMode,
-                onToggleTheme = { viewModel.toggleDarkMode() },
                 isGridEnabled = isGridEnabled,
-                onToggleGrid = { viewModel.toggleGrid() },
                 isLocked = isLocked,
-                onToggleLock = { viewModel.toggleLock() },
-                onShowSettings = { 
+                canvasDimensions = canvasDimensions,
+                selectedBlock = selectedBlock,
+                scale = scale,
+                offset = offset,
+                density = density,
+                context = context,
+                colors = colors,
+                scope = scope,
+                onCloseDrawer = { scope.launch { scaffoldState.drawerState.close() } },
+                onShowSettings = {
                     showSettingsModal = true
                     scope.launch { scaffoldState.drawerState.close() }
                 },
-                onAddTextBlock = {
-                    val spawnX = ((-offset.x / density.density) + 100f) / scale
-                    val spawnY = ((-offset.y / density.density) + 100f) / scale
-                    viewModel.insertBlock(BlockEntity(0, 0, "Novo Bloco", "text", spawnX, spawnY, 220, 180, 
-                        "{\"text\":\"Novo texto aqui...\", \"fontSize\": 13, \"align\": \"left\"}"))
-                    scope.launch { scaffoldState.drawerState.close() }
-                },
-                onAddChartBlock = {
-                    val spawnX = ((-offset.x / density.density) + 100f) / scale
-                    val spawnY = ((-offset.y / density.density) + 100f) / scale
-                    viewModel.insertBlock(BlockEntity(0, 0, "Radar Chart", "chart", spawnX, spawnY, 300, 300, 
-                        "{\"ninjutsu\":5, \"inteligencia\":5, \"chakra\":5, \"taijutsu\":5, \"vigor\":5, \"genjutsu\":5}"))
-                    scope.launch { scaffoldState.drawerState.close() }
-                },
-                onAddImageBlock = {
-                    val spawnX = ((-offset.x / density.density) + 100f) / scale
-                    val spawnY = ((-offset.y / density.density) + 100f) / scale
-                    viewModel.insertBlock(BlockEntity(0, 0, "Imagem", "image", spawnX, spawnY, 250, 250, 
-                        "{\"url\":\"\"}"))
-                    scope.launch { scaffoldState.drawerState.close() }
-                },
-                onExportPdf = {
-                    pdfExportLauncher.launch("${brandTitle.replace(" ", "_")}_export.pdf")
-                    scope.launch { scaffoldState.drawerState.close() }
-                },
-                onSharePdf = {
-                    if (uiState is BlockUiState.Success) {
-                        val (w, h) = canvasDimensions
-                        PdfExporter.sharePdf(
-                            context = context,
-                            blocks = (uiState as BlockUiState.Success).blocks,
-                            canvasWidth = w,
-                            canvasHeight = h,
-                            fileName = "${brandTitle.replace(" ", "_")}_export.pdf"
-                        )
-                    }
-                    scope.launch { scaffoldState.drawerState.close() }
-                },
-                onPickGalleryImage = {
-                    galleryPickerLauncher.launch("image/*")
-                    scope.launch { scaffoldState.drawerState.close() }
-                },
-                onExportToGallery = {
-                    viewModel.syncToGallery(context) { zipFile ->
-                        try {
-                            val uri = androidx.core.content.FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider",
-                                zipFile
-                            )
-                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                type = "application/zip"
-                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartilhar Imagens da Galeria (ZIP)"))
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                    scope.launch { scaffoldState.drawerState.close() }
-                },
-                selectedBlock = selectedBlock,
-                onDeselectBlock = { viewModel.selectBlock(null) },
-                onUpdateTitle = { viewModel.updateSelectedTitle(it) },
-                onUpdateTextFormatting = { sz, b, it, al, col ->
-                    viewModel.updateSelectedFormatting(sz, b, it, al, col)
-                },
-                onUpdateChartAttribute = { attr, value ->
-                    viewModel.updateSelectedChartAttribute(attr, value)
-                },
-                onUpdateImageUrl = { url ->
-                    viewModel.updateSelectedImageUrl(url)
-                },
-                onUpdateValue = { valNum ->
-                    viewModel.updateSelectedValue(valNum)
-                },
-                onUpdateRealizadoEm = { dateStr ->
-                    viewModel.updateSelectedRealizadoEm(dateStr)
-                },
-                onUpdatePagador = { pag ->
-                    viewModel.updateSelectedPagador(pag)
-                },
-                onUpdateDestinatario = { dest ->
-                    viewModel.updateSelectedDestinatario(dest)
-                },
-                onUpdateInstituicao = { inst ->
-                    viewModel.updateSelectedInstituicao(inst)
-                },
-                onDuplicateBlock = {
-                    viewModel.duplicateBlock(it)
-                },
-                onDeleteBlock = {
-                    viewModel.deleteBlock(it)
-                },
-                colors = colors
-            ) 
+                onLaunchImport = { jsonImportLauncher.launch("application/json"); scope.launch { scaffoldState.drawerState.close() } },
+                onLaunchExport = { jsonExportLauncher.launch("${brandTitle.replace(" ", "_")}_backup.json"); scope.launch { scaffoldState.drawerState.close() } },
+                onLaunchPdfExport = { pdfExportLauncher.launch("${brandTitle.replace(" ", "_")}_export.pdf"); scope.launch { scaffoldState.drawerState.close() } },
+                onLaunchGalleryPicker = { galleryPickerLauncher.launch("image/*"); scope.launch { scaffoldState.drawerState.close() } }
+            )
         }
     ) { padding ->
         Box(
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(colors.bgMain)
+            Modifier.padding(padding).fillMaxSize().background(colors.bgMain)
                 .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
+                    detectTransformGestures { _, pan: Offset, zoom: Float, _ ->
                         scale = (scale * zoom).coerceIn(0.15f, 3f)
                         offset += pan
                     }
                 }
         ) {
-            val (canvasWidth, canvasHeight) = canvasDimensions
-            
-            if (isGridEnabled) {
-                CanvasBackground(
-                    scale = { scale },
-                    offset = { offset },
-                    gridColor = colors.canvasGrid
-                )
-            }
+            if (isGridEnabled) CanvasBackground(scale = { scale }, offset = { offset }, gridColor = colors.canvasGrid)
 
-            Box(Modifier.fillMaxSize().graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                translationX = offset.x
-                translationY = offset.y
-            }) {
+            Box(Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y }) {
                 if (uiState is BlockUiState.Success) {
-                    val blocks = (uiState as BlockUiState.Success).blocks
-                    blocks.forEach { block ->
+                    uiState.blocks.forEach { block ->
                         key(block.id) {
                             DraggableBlock(
-                                key = block.id, 
-                                block = block, 
-                                onMove = { x, y -> 
-                                    if (!isLocked) {
-                                        val boundedX = x.coerceIn(0f, canvasWidth.toFloat() - block.width)
-                                        val boundedY = y.coerceIn(0f, canvasHeight.toFloat() - block.height)
-                                        viewModel.updateBlockLive(block.copy(posX = boundedX, posY = boundedY))
-                                    }
-                                },
-                                onResize = { w, h -> 
-                                    if (!isLocked) {
-                                        val boundedW = w.coerceIn(100, canvasWidth - block.posX.toInt())
-                                        val boundedH = h.coerceIn(80, canvasHeight - block.posY.toInt())
-                                        viewModel.updateBlockLive(block.copy(width = boundedW, height = boundedH))
-                                    }
-                                },
+                                key = block.id, block = block,
+                                onMove = { x, y -> if (!isLocked) viewModel.updateBlockLive(block.copy(posX = x.coerceAtLeast(0f), posY = y.coerceAtLeast(0f))) },
+                                onResize = { w, h -> if (!isLocked) viewModel.updateBlockLive(block.copy(width = w.coerceIn(100, 3000), height = h.coerceIn(80, 3000))) },
                                 onDelete = { if (!isLocked) viewModel.deleteBlock(block) },
                                 onSelect = { viewModel.selectBlock(block) },
                                 isSelected = block.id == selectedBlockId,
-                                currentScale = { scale },
-                                colors = colors,
-                                viewModel = viewModel
+                                colors = colors, viewModel = viewModel
                             )
                         }
                     }
                 }
             }
 
-            if (uiState is BlockUiState.Success) {
-                val blocks = (uiState as BlockUiState.Success).blocks
-                if (appliedQuery.isNotEmpty()) {
-                    Column(
-                        Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Surface(
-                            color = colors.accent.copy(alpha = 0.9f),
-                            shape = RoundedCornerShape(20.dp),
-                            elevation = 4.dp
-                        ) {
-                            Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.FilterList, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Filtrando por: \"$appliedQuery\"", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                IconButton(onClick = { viewModel.setSearchQuery(""); viewModel.applySearch() }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.Close, "Limpar Busca", tint = Color.White, modifier = Modifier.size(14.dp))
-                                }
-                            }
-                        }
-                        
-                        if (blocks.isEmpty()) {
-                            Spacer(Modifier.height(100.dp))
-                            Text("Nenhum bloco corresponde à sua busca.", color = colors.textMain.copy(0.4f), fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                }
-            }
-
-            if (uiState is BlockUiState.Loading) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center), color = colors.accent)
-            }
+            if (uiState is BlockUiState.Success) BlockFilterPill(appliedQuery, uiState.blocks.isEmpty(), { viewModel.setSearchQuery(""); viewModel.applySearch() }, colors)
+            if (uiState is BlockUiState.Loading) CircularProgressIndicator(Modifier.align(Alignment.Center), color = colors.accent)
 
             if (showSettingsModal) {
                 val modules by viewModel.modulesState.collectAsState()
                 val canvasConfig by viewModel.canvasConfig.collectAsState()
+                val galleryBaseUrl by viewModel.galleryBaseUrl.collectAsStateWithLifecycle()
+                val githubToken by viewModel.githubToken.collectAsStateWithLifecycle()
                 SettingsModal(
-                    title = brandTitle,
-                    onTitleChange = { viewModel.setBrandTitle(it) },
-                    canvasDimensions = canvasDimensions,
-                    onDimensionsChange = { w, h -> viewModel.setCanvasDimensions(w, h) },
-                    themeStyle = themeStyle,
-                    onThemeStyleChange = { viewModel.setThemeStyle(it) },
-                    galleryBaseUrl = galleryBaseUrl,
-                    onGalleryBaseUrlChange = { viewModel.setGalleryBaseUrl(it) },
-                    githubToken = githubToken,
-                    onGithubTokenChange = { viewModel.setGithubToken(it) },
-                    modules = modules,
-                    onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) },
-                    config = canvasConfig,
-                    onToggleAutoOcr = { viewModel.toggleAutoOcr(it) },
+                    title = brandTitle, onTitleChange = { viewModel.setBrandTitle(it) },
+                    themeStyle = themeStyle, onThemeStyleChange = { viewModel.setThemeStyle(it) },
+                    galleryBaseUrl = galleryBaseUrl, onGalleryBaseUrlChange = { viewModel.setGalleryBaseUrl(it) },
+                    githubToken = githubToken, onGithubTokenChange = { viewModel.setGithubToken(it) },
+                    modules = modules, onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) },
+                    config = canvasConfig, onToggleAutoOcr = { viewModel.toggleAutoOcr(it) },
                     onToggleFinancialBadges = { viewModel.toggleFinancialBadges(it) },
                     onTogglePartyDetails = { viewModel.togglePartyDetails(it) },
                     onToggleFitAspectRatio = { viewModel.toggleFitAspectRatio(it) },
-                    onDismiss = { showSettingsModal = false },
-                    colors = colors
+                    onDismiss = { showSettingsModal = false }, colors = colors
                 )
             }
 
-            // Barra Flutuante de Zoom & Centralizar
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, bottom = 16.dp),
-                color = colors.bgCard.copy(alpha = 0.95f),
-                shape = RoundedCornerShape(24.dp),
-                elevation = 6.dp,
-                border = BorderStroke(1.dp, colors.borderSubtle)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { scale = (scale / 1.25f).coerceIn(0.15f, 3f) },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(Icons.Rounded.Remove, "Zoom Out", tint = colors.textMain, modifier = Modifier.size(16.dp))
-                    }
-                    Text(
-                        text = "${(scale * 100).toInt()}%",
-                        color = colors.textMain,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clickable { scale = 1f; offset = Offset.Zero }
-                            .padding(horizontal = 6.dp)
-                    )
-                    IconButton(
-                        onClick = { scale = (scale * 1.25f).coerceIn(0.15f, 3f) },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(Icons.Rounded.Add, "Zoom In", tint = colors.textMain, modifier = Modifier.size(16.dp))
-                    }
-                    Box(Modifier.height(16.dp).width(1.dp).background(colors.borderSubtle))
-                    IconButton(
-                        onClick = { scale = 1f; offset = Offset.Zero },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(Icons.Rounded.CenterFocusStrong, "Centralizar", tint = colors.accent, modifier = Modifier.size(16.dp))
-                    }
-                }
-            }
+            BlockFloatingZoomBar(scale = scale, onScaleChange = { scale = it }, onResetVision = { scale = 1f; offset = Offset.Zero }, colors = colors)
         }
     }
 }

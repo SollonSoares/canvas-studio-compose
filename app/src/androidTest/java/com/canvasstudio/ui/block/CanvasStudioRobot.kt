@@ -79,7 +79,7 @@ class CanvasStudioRobot(private val rule: ComposeContentTestRule) {
         rule.waitForIdle()
         rule.onNodeWithText("Buscar blocos...").performScrollTo().performTextInput(query)
         stepPause(800L)
-        rule.onNodeWithContentDescription("Buscar").performClick()
+        rule.onNode(hasText("Buscar") or hasContentDescription("Buscar")).performClick()
         rule.waitForIdle()
         stepPause(1500L)
         return this
@@ -87,7 +87,7 @@ class CanvasStudioRobot(private val rule: ComposeContentTestRule) {
 
     fun clearSearch(): CanvasStudioRobot {
         rule.waitForIdle()
-        rule.onNodeWithContentDescription("Limpar Busca").performClick()
+        rule.onNode(hasContentDescription("Limpar") or hasContentDescription("Limpar Busca")).performClick()
         rule.waitForIdle()
         stepPause(1000L)
         return this

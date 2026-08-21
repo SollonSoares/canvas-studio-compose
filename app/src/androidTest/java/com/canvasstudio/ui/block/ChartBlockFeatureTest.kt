@@ -1,6 +1,7 @@
 package com.canvasstudio.ui.block
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.canvasstudio.data.local.entity.BlockEntity
@@ -17,7 +18,7 @@ import org.junit.runner.RunWith
 class ChartBlockFeatureTest {
 
     @get:Rule
-    val composeTestRule = createComposeRule()
+    val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     private lateinit var repository: InMemoryBlockRepository
     private lateinit var preferences: InMemoryPreferencesManager

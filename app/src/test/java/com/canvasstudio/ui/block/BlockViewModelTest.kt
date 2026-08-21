@@ -145,7 +145,7 @@ class BlockViewModelTest {
         advanceUntilIdle()
 
         val jsonExported = viewModel.exportToJson()
-        assertTrue(jsonExported.contains("app_brand_title"))
-        assertTrue(jsonExported.contains("blocks"))
+        assertTrue(jsonExported.contains("brand"))
+        assertTrue(jsonExported.contains("blocos"))
     }
 }

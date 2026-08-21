@@ -17,10 +17,10 @@ import com.canvasstudio.designsystem.tokens.CanvasDimens
 
 @Composable
 fun CanvasToggle(
-    label: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    label: String = "",
     description: String? = null,
     activeColor: Color = CanvasTheme.colors.accent,
     enabled: Boolean = true
@@ -34,20 +34,24 @@ fun CanvasToggle(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f).padding(end = CanvasDimens.spaceSm)) {
-            Text(
-                text = label,
-                color = if (enabled) colors.textMain else colors.textMuted,
-                fontSize = 13.5.sp,
-                fontWeight = FontWeight.Medium
-            )
-            if (!description.isNullOrBlank()) {
-                Text(
-                    text = description,
-                    color = colors.textMuted,
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp
-                )
+        if (label.isNotBlank() || !description.isNullOrBlank()) {
+            Column(modifier = Modifier.weight(1f).padding(end = CanvasDimens.spaceSm)) {
+                if (label.isNotBlank()) {
+                    Text(
+                        text = label,
+                        color = if (enabled) colors.textMain else colors.textMuted,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                if (!description.isNullOrBlank()) {
+                    Text(
+                        text = description,
+                        color = colors.textMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp
+                    )
+                }
             }
         }
         Switch(
