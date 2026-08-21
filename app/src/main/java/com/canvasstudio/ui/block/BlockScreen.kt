@@ -115,7 +115,7 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            viewModel.importSharedUri(it, "image/*", context)
+            viewModel.importSharedUri(context, it)
         }
     }
 
@@ -364,6 +364,7 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
 
             if (showSettingsModal) {
                 val modules by viewModel.modulesState.collectAsState()
+                val canvasConfig by viewModel.canvasConfig.collectAsState()
                 SettingsModal(
                     title = brandTitle,
                     onTitleChange = { viewModel.setBrandTitle(it) },
@@ -371,6 +372,11 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     onDimensionsChange = { w, h -> viewModel.setCanvasDimensions(w, h) },
                     modules = modules,
                     onToggleModule = { type, enabled -> viewModel.toggleModule(type, enabled) },
+                    config = canvasConfig,
+                    onToggleAutoOcr = { viewModel.toggleAutoOcr(it) },
+                    onToggleFinancialBadges = { viewModel.toggleFinancialBadges(it) },
+                    onTogglePartyDetails = { viewModel.togglePartyDetails(it) },
+                    onToggleFitAspectRatio = { viewModel.toggleFitAspectRatio(it) },
                     onDismiss = { showSettingsModal = false },
                     colors = colors
                 )

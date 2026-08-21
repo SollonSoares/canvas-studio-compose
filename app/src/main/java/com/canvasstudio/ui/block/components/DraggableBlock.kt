@@ -94,6 +94,7 @@ fun DraggableBlock(
     }
 
     val isLocked by viewModel.isLocked.collectAsState()
+    val canvasConfig by viewModel.canvasConfig.collectAsState()
 
     val parsedTextColor = remember(metadata) {
         val hex = metadata?.get("textColor")?.jsonPrimitive?.content
@@ -220,7 +221,7 @@ fun DraggableBlock(
                 val isPix = remember(metadata) {
                     metadata?.get("isPix")?.jsonPrimitive?.booleanOrNull == true || block.title.contains("PIX", ignoreCase = true)
                 }
-                if (isPix) {
+                if (isPix && canvasConfig.showFinancialBadges) {
                     Surface(
                         color = Color(0xFF32BCAD).copy(alpha = 0.18f),
                         shape = RoundedCornerShape(4.dp),
@@ -244,7 +245,7 @@ fun DraggableBlock(
                         }
                 }
 
-                if (valorFormatted != null) {
+                if (valorFormatted != null && canvasConfig.showFinancialBadges) {
                     Surface(
                         color = Color(0xFF34C759).copy(alpha = 0.15f),
                         shape = RoundedCornerShape(4.dp),
@@ -293,38 +294,43 @@ fun DraggableBlock(
             val instituicao = remember(metadata) { metadata?.get("instituicao")?.jsonPrimitive?.contentOrNull }
             val realizadoEm = remember(metadata) { metadata?.get("realizadoEm")?.jsonPrimitive?.contentOrNull }
 
-            if (pagador != null || destinatario != null || instituicao != null || (realizadoEm != null && realizadoEm.isNotEmpty())) {
+            val hasPartyInfo = canvasConfig.showPartyDetails && (pagador != null || destinatario != null || instituicao != null)
+            val hasDateInfo = realizadoEm != null && realizadoEm.isNotEmpty()
+
+            if (hasPartyInfo || hasDateInfo) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
-                    if (pagador != null) {
-                        Text(
-                            text = "📤 De: $pagador",
-                            color = colors.textMain.copy(alpha = 0.8f),
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1
-                        )
-                    }
-                    if (destinatario != null) {
-                        Text(
-                            text = "📥 Para: $destinatario",
-                            color = colors.textMain.copy(alpha = 0.95f),
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1
-                        )
-                    }
-                    if (instituicao != null) {
-                        Text(
-                            text = "🏦 Banco: $instituicao",
-                            color = colors.textMuted,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Normal,
-                            maxLines = 1
-                        )
+                    if (canvasConfig.showPartyDetails) {
+                        if (pagador != null) {
+                            Text(
+                                text = "📤 De: $pagador",
+                                color = colors.textMain.copy(alpha = 0.8f),
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1
+                            )
+                        }
+                        if (destinatario != null) {
+                            Text(
+                                text = "📥 Para: $destinatario",
+                                color = colors.textMain.copy(alpha = 0.95f),
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1
+                            )
+                        }
+                        if (instituicao != null) {
+                            Text(
+                                text = "🏦 Banco: $instituicao",
+                                color = colors.textMuted,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Normal,
+                                maxLines = 1
+                            )
+                        }
                     }
                     if (realizadoEm != null && realizadoEm.isNotEmpty()) {
                         Row(

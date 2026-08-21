@@ -2,6 +2,7 @@ package com.canvasstudio.ui.block.utils
 
 import android.graphics.Bitmap
 import android.util.Log
+import com.canvasstudio.domain.model.AnalyzedReceipt
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -9,18 +10,6 @@ import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-data class AnalyzedReceipt(
-    val title: String,
-    val value: Float?,
-    val valueFormatted: String?,
-    val realizadoEm: String,
-    val isPix: Boolean = false,
-    val pagador: String? = null, // "De"
-    val destinatario: String? = null, // "Para"
-    val instituicao: String? = null,
-    val rawText: String
-)
 
 object ReceiptAnalyzer {
 

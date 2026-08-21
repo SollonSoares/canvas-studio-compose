@@ -135,7 +135,7 @@ class MainActivity : ComponentActivity() {
 
         if (uris.isNotEmpty()) {
             uris.forEach { uri ->
-                blockViewModel.importSharedUri(uri, type, applicationContext)
+                blockViewModel.importSharedUri(applicationContext, uri)
             }
         } else if (!text.isNullOrBlank()) {
             blockViewModel.importTextShared(text, subject)

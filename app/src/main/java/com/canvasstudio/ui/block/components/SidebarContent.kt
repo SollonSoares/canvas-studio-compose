@@ -580,68 +580,24 @@ fun SidebarContent(
             MenuSectionTitle("PREFERÊNCIAS", colors)
             SidebarButton("Configurações", Icons.Rounded.Settings, colors.textMain, onClick = onShowSettings)
 
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("MODO ESCURO", color = colors.textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                Switch(
-                    checked = isDarkMode,
-                    onCheckedChange = { onToggleTheme() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFF30D158),
-                        uncheckedThumbColor = Color.White,
-                        uncheckedTrackColor = Color.Gray.copy(0.35f)
-                    ),
-                    modifier = Modifier.scale(0.8f)
-                )
-            }
+            com.canvasstudio.designsystem.components.CanvasToggle(
+                label = "Modo Escuro",
+                checked = isDarkMode,
+                onCheckedChange = { onToggleTheme() }
+            )
 
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("GRADE VISÍVEL", color = colors.textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                Switch(
-                    checked = isGridEnabled,
-                    onCheckedChange = { onToggleGrid() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = colors.accent,
-                        uncheckedThumbColor = Color.White,
-                        uncheckedTrackColor = Color.Gray.copy(0.35f)
-                    ),
-                    modifier = Modifier.scale(0.8f)
-                )
-            }
+            com.canvasstudio.designsystem.components.CanvasToggle(
+                label = "Grade Visível",
+                checked = isGridEnabled,
+                onCheckedChange = { onToggleGrid() }
+            )
 
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("BLOQUEAR EDIÇÃO", color = colors.textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                Switch(
-                    checked = isLocked,
-                    onCheckedChange = { onToggleLock() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = colors.danger,
-                        uncheckedThumbColor = Color.White,
-                        uncheckedTrackColor = Color.Gray.copy(0.35f)
-                    ),
-                    modifier = Modifier.scale(0.8f)
-                )
-            }
+            com.canvasstudio.designsystem.components.CanvasToggle(
+                label = "Bloquear Edição",
+                checked = isLocked,
+                onCheckedChange = { onToggleLock() },
+                activeColor = colors.danger
+            )
         }
 
         Spacer(Modifier.weight(1f))

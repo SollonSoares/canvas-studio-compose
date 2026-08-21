@@ -20,16 +20,13 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.canvasstudio.designsystem.CanvasTheme
 import com.canvasstudio.ui.theme.CanvasColors
 
 @Composable
-fun MenuSectionTitle(title: String, colors: CanvasColors) {
-    Text(
-        text = title,
-        color = colors.textMuted,
-        fontSize = 10.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 0.8.sp,
+fun MenuSectionTitle(title: String, colors: CanvasColors = CanvasTheme.colors) {
+    com.canvasstudio.designsystem.components.CanvasSectionHeader(
+        title = title,
         modifier = Modifier.padding(start = 4.dp)
     )
 }
@@ -39,22 +36,13 @@ fun ModuleToggle(
     label: String, 
     isEnabled: Boolean, 
     onToggle: (Boolean) -> Unit, 
-    colors: CanvasColors
+    colors: CanvasColors = CanvasTheme.colors
 ) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp), 
-        horizontalArrangement = Arrangement.SpaceBetween, 
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = colors.textMain, fontSize = 14.sp)
-        Switch(
-            checked = isEnabled, 
-            onCheckedChange = onToggle, 
-            colors = SwitchDefaults.colors(checkedThumbColor = colors.accent)
-        )
-    }
+    com.canvasstudio.designsystem.components.CanvasToggle(
+        label = label,
+        checked = isEnabled,
+        onCheckedChange = onToggle
+    )
 }
 
 @Composable

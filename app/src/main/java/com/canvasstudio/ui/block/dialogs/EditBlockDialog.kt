@@ -1,13 +1,14 @@
 package com.canvasstudio.ui.block.dialogs
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +21,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.canvasstudio.data.local.entity.BlockEntity
+import com.canvasstudio.designsystem.CanvasTheme
+import com.canvasstudio.designsystem.components.*
+import com.canvasstudio.designsystem.tokens.CanvasDimens
 import com.canvasstudio.ui.theme.CanvasColors
 import kotlinx.serialization.json.*
 
@@ -29,7 +33,7 @@ fun EditBlockDialog(
     onDismiss: () -> Unit, 
     onConfirm: (BlockEntity) -> Unit, 
     onLiveUpdate: (BlockEntity) -> Unit, 
-    colors: CanvasColors
+    colors: CanvasColors = CanvasTheme.colors
 ) {
     var title by remember { mutableStateOf(block.title) }
     var type by remember { mutableStateOf(block.type) }
@@ -72,116 +76,11 @@ fun EditBlockDialog(
         onLiveUpdate(block.copy(title = title, type = type, contentJson = currentContent.toString()))
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        backgroundColor = colors.bgMenu,
-        shape = RoundedCornerShape(14.dp),
-        title = { Text("Editar Bloco", color = colors.textMain, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                Text("Título", color = colors.textMain.copy(0.6f), fontSize = 12.sp)
-                TextField(
-                    value = title, 
-                    onValueChange = { title = it }, 
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics { contentDescription = "Campo Título" }, 
-                    colors = TextFieldDefaults.textFieldColors(
-                        textColor = colors.textMain, 
-                        cursorColor = colors.accent, 
-                        focusedIndicatorColor = colors.accent, 
-                        backgroundColor = Color.Transparent
-                    )
-                )
-                
-                Spacer(Modifier.height(16.dp))
-                
-                Text("Tipo", color = colors.textMain.copy(0.6f), fontSize = 12.sp)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    listOf("text", "image", "chart").forEach { t ->
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { type = t }) {
-                            RadioButton(
-                                selected = type == t, 
-                                onClick = { type = t }, 
-                                colors = RadioButtonDefaults.colors(selectedColor = colors.accent)
-                            )
-                            Text(t.replaceFirstChar { it.uppercase() }, color = colors.textMain, fontSize = 14.sp)
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-                
-                Text("Conteúdo", color = colors.textMain.copy(0.6f), fontSize = 12.sp)
-                when(type) {
-                    "text" -> {
-                        var textFieldValue by remember { mutableStateOf(TextFieldValue(textContent)) }
-                        
-                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.Start) {
-                            IconButton(onClick = { 
-                                textFieldValue = insertTag(textFieldValue, "**", "**")
-                                textContent = textFieldValue.text
-                            }) { Icon(Icons.Default.FormatBold, null, tint = colors.accent) }
-                            IconButton(onClick = { 
-                                textFieldValue = insertTag(textFieldValue, "*", "*")
-                                textContent = textFieldValue.text
-                            }) { Icon(Icons.Default.FormatItalic, null, tint = colors.accent) }
-                        }
-
-                        TextField(
-                            value = textFieldValue,
-                            onValueChange = { 
-                                textFieldValue = it
-                                textContent = it.text 
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 100.dp)
-                                .semantics { contentDescription = "Campo Conteúdo Texto" },
-                            placeholder = { Text("Use **negrito** ou *itálico*") },
-                            colors = TextFieldDefaults.textFieldColors(
-                                textColor = colors.textMain, 
-                                cursorColor = colors.accent, 
-                                focusedIndicatorColor = colors.accent, 
-                                backgroundColor = Color.Transparent
-                            )
-                        )
-                    }
-                    "image" -> {
-                        TextField(
-                            value = imageUrl,
-                            onValueChange = { imageUrl = it },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .semantics { contentDescription = "Campo URL Imagem" },
-                            placeholder = { Text("URL da imagem") },
-                            colors = TextFieldDefaults.textFieldColors(
-                                textColor = colors.textMain, 
-                                cursorColor = colors.accent, 
-                                focusedIndicatorColor = colors.accent, 
-                                backgroundColor = Color.Transparent
-                            )
-                        )
-                    }
-                    "chart" -> {
-                        Text(
-                            text = "Valores dos Atributos (Insira qualquer valor):", 
-                            color = colors.textMain.copy(0.7f), 
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(bottom = 6.dp)
-                        )
-                        ChartValueInput("Ninjutsu", ninjutsu, { ninjutsu = it }, colors)
-                        ChartValueInput("Inteligência", inteligencia, { inteligencia = it }, colors)
-                        ChartValueInput("Chakra", chakra, { chakra = it }, colors)
-                        ChartValueInput("Taijutsu", taijutsu, { taijutsu = it }, colors)
-                        ChartValueInput("Vigor", vigor, { vigor = it }, colors)
-                        ChartValueInput("Genjutsu", genjutsu, { genjutsu = it }, colors)
-                    }
-                }
-            }
-        },
-        confirmButton = { 
-            Button(
+    CanvasModal(
+        title = "Editar Bloco",
+        onDismiss = onDismiss,
+        confirmButton = {
+            CanvasButton(
                 onClick = { 
                     val newContent = when(type) {
                         "text" -> buildJsonObject { put("text", textContent); put("titleSize", 13); put("align", "left") }
@@ -197,18 +96,128 @@ fun EditBlockDialog(
                         else -> initialContent
                     }
                     onConfirm(block.copy(title = title, type = type, contentJson = newContent.toString())) 
-                }, 
-                colors = ButtonDefaults.buttonColors(backgroundColor = colors.accent),
-                shape = RoundedCornerShape(6.dp)
-            ) { Text("Salvar", color = Color.White) } 
+                },
+                variant = CanvasButtonVariant.Primary
+            ) {
+                Text("Salvar", fontWeight = FontWeight.Bold)
+            }
         },
-        dismissButton = { 
-            TextButton(
+        dismissButton = {
+            CanvasButton(
                 onClick = onDismiss,
-                shape = RoundedCornerShape(6.dp)
-            ) { Text("Cancelar", color = colors.textMain.copy(0.6f)) } 
+                variant = CanvasButtonVariant.Ghost
+            ) {
+                Text("Cancelar")
+            }
         }
-    )
+    ) {
+        CanvasSectionHeader("Título do Bloco")
+        Spacer(Modifier.height(CanvasDimens.spaceXs))
+        CanvasTextField(
+            value = title,
+            onValueChange = { title = it },
+            placeholder = "Título do bloco..."
+        )
+        
+        CanvasDivider()
+
+        CanvasSectionHeader("Tipo de Bloco")
+        Spacer(Modifier.height(CanvasDimens.spaceXs))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(CanvasDimens.spaceSm)
+        ) {
+            listOf(
+                Pair("text", "Texto"),
+                Pair("image", "Imagem"),
+                Pair("chart", "Radar")
+            ).forEach { (t, label) ->
+                val isSelected = type == t
+                OutlinedButton(
+                    onClick = { type = t },
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(1.dp, if (isSelected) colors.accent else colors.borderSubtle),
+                    shape = CanvasDimens.shapeMd,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        backgroundColor = if (isSelected) colors.accent.copy(alpha = 0.12f) else Color.Transparent
+                    )
+                ) {
+                    Text(
+                        text = label,
+                        color = if (isSelected) colors.accent else colors.textMain,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+
+        CanvasDivider()
+
+        CanvasSectionHeader("Conteúdo")
+        Spacer(Modifier.height(CanvasDimens.spaceXs))
+        when(type) {
+            "text" -> {
+                var textFieldValue by remember { mutableStateOf(TextFieldValue(textContent)) }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    IconButton(onClick = { 
+                        textFieldValue = insertTag(textFieldValue, "**", "**")
+                        textContent = textFieldValue.text
+                    }) { Icon(Icons.Default.FormatBold, "Negrito", tint = colors.accent) }
+                    IconButton(onClick = { 
+                        textFieldValue = insertTag(textFieldValue, "*", "*")
+                        textContent = textFieldValue.text
+                    }) { Icon(Icons.Default.FormatItalic, "Itálico", tint = colors.accent) }
+                }
+
+                TextField(
+                    value = textFieldValue,
+                    onValueChange = { 
+                        textFieldValue = it
+                        textContent = it.text 
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 110.dp)
+                        .semantics { contentDescription = "Campo Conteúdo Texto" },
+                    placeholder = { Text("Use **negrito** ou *itálico*", color = colors.textMuted.copy(alpha = 0.5f)) },
+                    shape = CanvasDimens.shapeMd,
+                    colors = TextFieldDefaults.textFieldColors(
+                        textColor = colors.textMain, 
+                        cursorColor = colors.accent, 
+                        focusedIndicatorColor = colors.accent, 
+                        backgroundColor = colors.bgInput
+                    )
+                )
+            }
+            "image" -> {
+                CanvasTextField(
+                    value = imageUrl,
+                    onValueChange = { imageUrl = it },
+                    placeholder = "https://... ou URI do arquivo",
+                    label = "URL ou Caminho da Imagem"
+                )
+            }
+            "chart" -> {
+                Text(
+                    text = "Valores dos Atributos:", 
+                    color = colors.textMuted, 
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                ChartValueInput("Ninjutsu", ninjutsu, { ninjutsu = it }, colors)
+                ChartValueInput("Inteligência", inteligencia, { inteligencia = it }, colors)
+                ChartValueInput("Chakra", chakra, { chakra = it }, colors)
+                ChartValueInput("Taijutsu", taijutsu, { taijutsu = it }, colors)
+                ChartValueInput("Vigor", vigor, { vigor = it }, colors)
+                ChartValueInput("Genjutsu", genjutsu, { genjutsu = it }, colors)
+            }
+        }
+    }
 }
 
 @Composable
@@ -218,29 +227,18 @@ private fun ChartValueInput(
     onValueChange: (Float) -> Unit, 
     colors: CanvasColors
 ) {
-    var textValue by remember(value) { 
-        mutableStateOf(if (value % 1f == 0f) value.toInt().toString() else value.toString()) 
-    }
+    var textValue by remember(value) { mutableStateOf(value.toString().removeSuffix(".0")) }
 
     Row(
-        modifier = Modifier
+        Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(vertical = 4.dp), 
+        horizontalArrangement = Arrangement.SpaceBetween, 
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label, 
-            color = colors.textMain, 
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f)
-        )
+        Text(label, color = colors.textMain, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = {
                     val newVal = (value - 1f).coerceAtLeast(0f)
@@ -249,9 +247,9 @@ private fun ChartValueInput(
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(
-                    Icons.Default.Remove,
-                    contentDescription = "Diminuir $label",
-                    tint = colors.accent,
+                    Icons.Default.Remove, 
+                    contentDescription = "Diminuir $label", 
+                    tint = colors.accent, 
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -288,7 +286,7 @@ private fun ChartValueInput(
                     unfocusedBorderColor = colors.borderSubtle,
                     backgroundColor = Color.Transparent
                 ),
-                shape = RoundedCornerShape(8.dp)
+                shape = CanvasDimens.shapeMd
             )
 
             IconButton(
