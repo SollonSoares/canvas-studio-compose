@@ -1,5 +1,6 @@
 package com.canvasstudio.ui.block.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -13,9 +14,10 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -23,9 +25,12 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.canvasstudio.data.local.entity.BlockEntity
 import com.canvasstudio.ui.theme.CanvasColors
+import kotlinx.serialization.json.*
 
 @Composable
 fun SidebarContent(
@@ -35,7 +40,6 @@ fun SidebarContent(
     onImp: () -> Unit, 
     onExp: () -> Unit,
     onClr: () -> Unit, 
-    onGen: () -> Unit, 
     onOrg: () -> Unit, 
     modules: Map<String, Boolean>,
     onToggleModule: (String, Boolean) -> Unit, 
@@ -50,6 +54,21 @@ fun SidebarContent(
     onAddChartBlock: () -> Unit,
     onAddImageBlock: () -> Unit,
     onExportPdf: () -> Unit,
+    onSharePdf: () -> Unit = {},
+    onPickGalleryImage: () -> Unit = {},
+    selectedBlock: BlockEntity? = null,
+    onDeselectBlock: () -> Unit = {},
+    onUpdateTitle: (String) -> Unit = {},
+    onUpdateTextFormatting: (fontSize: Int?, isBold: Boolean?, isItalic: Boolean?, align: String?, textColor: String?) -> Unit = { _, _, _, _, _ -> },
+    onUpdateChartAttribute: (attribute: String, value: Float) -> Unit = { _, _ -> },
+    onUpdateImageUrl: (url: String) -> Unit = {},
+    onUpdateValue: (Float?) -> Unit = {},
+    onUpdateRealizadoEm: (String) -> Unit = {},
+    onUpdatePagador: (String) -> Unit = {},
+    onUpdateDestinatario: (String) -> Unit = {},
+    onUpdateInstituicao: (String) -> Unit = {},
+    onDuplicateBlock: (BlockEntity) -> Unit = {},
+    onDeleteBlock: (BlockEntity) -> Unit = {},
     colors: CanvasColors
 ) {
     Column(
@@ -60,7 +79,7 @@ fun SidebarContent(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Cabeçalho do Menu (ORGANIZAÇÃO & PALCO - Adaptado para o topo)
+        // Cabeçalho do Menu
         Row(
             Modifier
                 .fillMaxWidth()
@@ -81,6 +100,397 @@ fun SidebarContent(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium
             )
+        }
+
+        // ==========================================
+        // 0. INSPETOR DE BLOCO SELECIONADO (Ou Dica)
+        // ==========================================
+        if (selectedBlock != null) {
+            val metadata = remember(selectedBlock.contentJson) {
+                try { Json.parseToJsonElement(selectedBlock.contentJson).jsonObject } catch (e: Exception) { null }
+            }
+
+            val currentFontSize = metadata?.get("fontSize")?.jsonPrimitive?.intOrNull 
+                ?: metadata?.get("titleSize")?.jsonPrimitive?.intOrNull 
+                ?: 13
+            val isBold = metadata?.get("isBold")?.jsonPrimitive?.booleanOrNull ?: false
+            val isItalic = metadata?.get("isItalic")?.jsonPrimitive?.booleanOrNull ?: false
+            val currentAlign = metadata?.get("align")?.jsonPrimitive?.content ?: "left"
+            val currentTextColor = metadata?.get("textColor")?.jsonPrimitive?.content
+            val imageUrl = metadata?.get("url")?.jsonPrimitive?.content ?: ""
+
+            val ninjutsu = metadata?.get("ninjutsu")?.jsonPrimitive?.floatOrNull ?: metadata?.get("nin")?.jsonPrimitive?.floatOrNull ?: 4f
+            val inteligencia = metadata?.get("inteligencia")?.jsonPrimitive?.floatOrNull ?: metadata?.get("int")?.jsonPrimitive?.floatOrNull ?: 4f
+            val chakra = metadata?.get("chakra")?.jsonPrimitive?.floatOrNull ?: metadata?.get("cha")?.jsonPrimitive?.floatOrNull ?: 4f
+            val taijutsu = metadata?.get("taijutsu")?.jsonPrimitive?.floatOrNull ?: metadata?.get("tai")?.jsonPrimitive?.floatOrNull ?: 4f
+            val vigor = metadata?.get("vigor")?.jsonPrimitive?.floatOrNull ?: metadata?.get("vig")?.jsonPrimitive?.floatOrNull ?: 4f
+            val genjutsu = metadata?.get("genjutsu")?.jsonPrimitive?.floatOrNull ?: metadata?.get("gen")?.jsonPrimitive?.floatOrNull ?: 4f
+
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(colors.bgCard)
+                    .border(1.dp, colors.accent.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Header do Bloco Selecionado
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(colors.accent.copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                selectedBlock.type.uppercase(),
+                                color = colors.accent,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = onDeselectBlock,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Close,
+                            "Desmarcar Bloco",
+                            tint = colors.textMuted,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                // Edição de Título no Inspetor
+                MenuSectionTitle("TÍTULO DO BLOCO", colors)
+                var currentTitle by remember(selectedBlock.id, selectedBlock.title) { mutableStateOf(selectedBlock.title) }
+                BasicTextField(
+                    value = currentTitle,
+                    onValueChange = {
+                        currentTitle = it
+                        onUpdateTitle(it)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(colors.bgInput, RoundedCornerShape(6.dp))
+                        .border(1.dp, colors.borderSubtle, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    textStyle = TextStyle(
+                        color = colors.textMain, 
+                        fontSize = 13.sp, 
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    cursorBrush = SolidColor(colors.accent),
+                    singleLine = true,
+                    decorationBox = { inner ->
+                        if (currentTitle.isEmpty()) Text("Título do bloco...", color = colors.textMuted, fontSize = 13.sp)
+                        inner()
+                    }
+                )
+
+                Divider(color = colors.borderSubtle)
+
+                // Campo Valor do Comprovante (R$)
+                val currentValor = remember(selectedBlock.contentJson) {
+                    try {
+                        val json = Json.parseToJsonElement(selectedBlock.contentJson).jsonObject
+                        json["valor"]?.jsonPrimitive?.floatOrNull
+                    } catch (e: Exception) { null }
+                }
+                
+                MenuSectionTitle("VALOR (R$)", colors)
+                var tempValorStr by remember(selectedBlock.id, currentValor) { 
+                    mutableStateOf(currentValor?.let { String.format(java.util.Locale.US, "%.2f", it) } ?: "") 
+                }
+                BasicTextField(
+                    value = tempValorStr,
+                    onValueChange = {
+                        tempValorStr = it
+                        val num = it.replace(",", ".").toFloatOrNull()
+                        onUpdateValue(num)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(colors.bgInput, RoundedCornerShape(6.dp))
+                        .border(1.dp, colors.borderSubtle, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    textStyle = TextStyle(
+                        color = Color(0xFF34C759), 
+                        fontSize = 13.sp, 
+                        fontWeight = FontWeight.Bold
+                    ),
+                    cursorBrush = SolidColor(colors.accent),
+                    singleLine = true,
+                    decorationBox = { inner ->
+                        if (tempValorStr.isEmpty()) Text("Ex: 150.00", color = colors.textMuted, fontSize = 13.sp)
+                        inner()
+                    }
+                )
+
+                // Campo Realizado Em (Data e Hora da Operação)
+                val currentRealizadoEm = remember(selectedBlock.contentJson) {
+                    try {
+                        val json = Json.parseToJsonElement(selectedBlock.contentJson).jsonObject
+                        json["realizadoEm"]?.jsonPrimitive?.contentOrNull
+                    } catch (e: Exception) { null }
+                }
+
+                MenuSectionTitle("REALIZADO EM", colors)
+                var tempRealizadoEmStr by remember(selectedBlock.id, currentRealizadoEm) { 
+                    mutableStateOf(currentRealizadoEm ?: "") 
+                }
+                BasicTextField(
+                    value = tempRealizadoEmStr,
+                    onValueChange = {
+                        tempRealizadoEmStr = it
+                        onUpdateRealizadoEm(it)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(colors.bgInput, RoundedCornerShape(6.dp))
+                        .border(1.dp, colors.borderSubtle, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    textStyle = TextStyle(
+                        color = colors.textMain, 
+                        fontSize = 12.sp, 
+                        fontWeight = FontWeight.Medium
+                    ),
+                    cursorBrush = SolidColor(colors.accent),
+                    singleLine = true,
+                    decorationBox = { inner ->
+                        if (tempRealizadoEmStr.isEmpty()) Text("Ex: 21/08/2026 14:30", color = colors.textMuted, fontSize = 12.sp)
+                        inner()
+                    }
+                )
+
+                // Campo Pagador (De / Origem)
+                val currentPagador = remember(selectedBlock.contentJson) {
+                    try {
+                        val json = Json.parseToJsonElement(selectedBlock.contentJson).jsonObject
+                        json["pagador"]?.jsonPrimitive?.contentOrNull
+                    } catch (e: Exception) { null }
+                }
+                if (currentPagador != null || selectedBlock.title.contains("PIX", true)) {
+                    MenuSectionTitle("DE (PAGADOR / ORIGEM)", colors)
+                    var tempPagador by remember(selectedBlock.id, currentPagador) { 
+                        mutableStateOf(currentPagador ?: "") 
+                    }
+                    BasicTextField(
+                        value = tempPagador,
+                        onValueChange = {
+                            tempPagador = it
+                            onUpdatePagador(it)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(colors.bgInput, RoundedCornerShape(6.dp))
+                            .border(1.dp, colors.borderSubtle, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        textStyle = TextStyle(color = colors.textMain, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                        cursorBrush = SolidColor(colors.accent),
+                        singleLine = true,
+                        decorationBox = { inner ->
+                            if (tempPagador.isEmpty()) Text("Nome de quem pagou...", color = colors.textMuted, fontSize = 12.sp)
+                            inner()
+                        }
+                    )
+                }
+
+                // Campo Destinatário (Para / Destino)
+                val currentDestinatario = remember(selectedBlock.contentJson) {
+                    try {
+                        val json = Json.parseToJsonElement(selectedBlock.contentJson).jsonObject
+                        json["destinatario"]?.jsonPrimitive?.contentOrNull
+                    } catch (e: Exception) { null }
+                }
+                if (currentDestinatario != null || selectedBlock.title.contains("PIX", true)) {
+                    MenuSectionTitle("PARA (DESTINATÁRIO)", colors)
+                    var tempDestinatario by remember(selectedBlock.id, currentDestinatario) { 
+                        mutableStateOf(currentDestinatario ?: "") 
+                    }
+                    BasicTextField(
+                        value = tempDestinatario,
+                        onValueChange = {
+                            tempDestinatario = it
+                            onUpdateDestinatario(it)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(colors.bgInput, RoundedCornerShape(6.dp))
+                            .border(1.dp, colors.borderSubtle, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        textStyle = TextStyle(color = colors.textMain, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                        cursorBrush = SolidColor(colors.accent),
+                        singleLine = true,
+                        decorationBox = { inner ->
+                            if (tempDestinatario.isEmpty()) Text("Nome do recebedor...", color = colors.textMuted, fontSize = 12.sp)
+                            inner()
+                        }
+                    )
+                }
+
+                // Campo Instituição Bancária
+                val currentInstituicao = remember(selectedBlock.contentJson) {
+                    try {
+                        val json = Json.parseToJsonElement(selectedBlock.contentJson).jsonObject
+                        json["instituicao"]?.jsonPrimitive?.contentOrNull
+                    } catch (e: Exception) { null }
+                }
+                if (currentInstituicao != null || selectedBlock.title.contains("PIX", true)) {
+                    MenuSectionTitle("INSTITUIÇÃO / BANCO", colors)
+                    var tempInstituicao by remember(selectedBlock.id, currentInstituicao) { 
+                        mutableStateOf(currentInstituicao ?: "") 
+                    }
+                    BasicTextField(
+                        value = tempInstituicao,
+                        onValueChange = {
+                            tempInstituicao = it
+                            onUpdateInstituicao(it)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(colors.bgInput, RoundedCornerShape(6.dp))
+                            .border(1.dp, colors.borderSubtle, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        textStyle = TextStyle(color = colors.textMain, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                        cursorBrush = SolidColor(colors.accent),
+                        singleLine = true,
+                        decorationBox = { inner ->
+                            if (tempInstituicao.isEmpty()) Text("Ex: Nu Pagamentos, Itaú...", color = colors.textMuted, fontSize = 12.sp)
+                            inner()
+                        }
+                    )
+                }
+
+                Divider(color = colors.borderSubtle)
+
+                when (selectedBlock.type.lowercase()) {
+                    "chart" -> {
+                        MenuSectionTitle("ATRIBUTOS DO RADAR", colors)
+                        AttributeSlider("Ninjutsu", ninjutsu, { onUpdateChartAttribute("ninjutsu", it) }, colors)
+                        AttributeSlider("Inteligência", inteligencia, { onUpdateChartAttribute("inteligencia", it) }, colors)
+                        AttributeSlider("Chakra", chakra, { onUpdateChartAttribute("chakra", it) }, colors)
+                        AttributeSlider("Taijutsu", taijutsu, { onUpdateChartAttribute("taijutsu", it) }, colors)
+                        AttributeSlider("Vigor", vigor, { onUpdateChartAttribute("vigor", it) }, colors)
+                        AttributeSlider("Genjutsu", genjutsu, { onUpdateChartAttribute("genjutsu", it) }, colors)
+                    }
+                    "image" -> {
+                        MenuSectionTitle("URL DA IMAGEM", colors)
+                        var tempUrl by remember(selectedBlock.id, imageUrl) { mutableStateOf(imageUrl) }
+                        BasicTextField(
+                            value = tempUrl,
+                            onValueChange = {
+                                tempUrl = it
+                                onUpdateImageUrl(it)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(colors.bgInput, RoundedCornerShape(6.dp))
+                                .border(1.dp, colors.borderSubtle, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            textStyle = TextStyle(color = colors.textMain, fontSize = 12.sp),
+                            cursorBrush = SolidColor(colors.accent),
+                            singleLine = true,
+                            decorationBox = { inner ->
+                                if (tempUrl.isEmpty()) Text("https://...", color = colors.textMuted, fontSize = 12.sp)
+                                inner()
+                            }
+                        )
+                    }
+                    else -> {
+                        // Formatação de Texto
+                        MenuSectionTitle("TAMANHO DA FONTE", colors)
+                        FontSizeSelector(
+                            currentSize = currentFontSize,
+                            onSizeSelected = { onUpdateTextFormatting(it, null, null, null, null) },
+                            colors = colors
+                        )
+
+                        MenuSectionTitle("ESTILO & PESO", colors)
+                        TextStyleToggle(
+                            isBold = isBold,
+                            onToggleBold = { onUpdateTextFormatting(null, !isBold, null, null, null) },
+                            isItalic = isItalic,
+                            onToggleItalic = { onUpdateTextFormatting(null, null, !isItalic, null, null) },
+                            colors = colors
+                        )
+
+                        MenuSectionTitle("ALINHAMENTO", colors)
+                        TextAlignSelector(
+                            currentAlign = currentAlign,
+                            onAlignSelected = { onUpdateTextFormatting(null, null, null, it, null) },
+                            colors = colors
+                        )
+
+                        MenuSectionTitle("COR DO TEXTO", colors)
+                        TextColorPalette(
+                            currentColorHex = currentTextColor,
+                            onColorSelected = { onUpdateTextFormatting(null, null, null, null, it) },
+                            colors = colors
+                        )
+                    }
+                }
+
+                Divider(color = colors.borderSubtle)
+
+                // Ações Rápidas do Bloco
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(Modifier.weight(1f)) {
+                        SidebarButton(
+                            "Duplicar",
+                            Icons.Rounded.ContentCopy,
+                            colors.textMain,
+                            onClick = { onDuplicateBlock(selectedBlock) }
+                        )
+                    }
+                    Box(Modifier.weight(1f)) {
+                        SidebarButton(
+                            "Excluir",
+                            Icons.Rounded.DeleteOutline,
+                            colors.danger,
+                            isDanger = true,
+                            onClick = { onDeleteBlock(selectedBlock) }
+                        )
+                    }
+                }
+            }
+        } else {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = colors.accent.copy(alpha = 0.08f),
+                border = BorderStroke(1.dp, colors.accent.copy(alpha = 0.2f))
+            ) {
+                Row(
+                    Modifier.padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Rounded.TouchApp,
+                        null,
+                        tint = colors.accent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Toque em um bloco no canvas para editar estilo e propriedades aqui.",
+                        color = colors.textSecondary,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp
+                    )
+                }
+            }
         }
 
         // 1. FILTRO
@@ -127,7 +537,14 @@ fun SidebarContent(
             MenuSectionTitle("CRIAR", colors)
             SidebarButton("Novo Bloco de Texto", Icons.Rounded.TextFields, colors.textMain, onClick = onAddTextBlock)
             SidebarButton("Novo Gráfico Radar", Icons.Rounded.BarChart, colors.textMain, onClick = onAddChartBlock)
-            SidebarButton("Inserir Imagem", Icons.Rounded.Image, colors.textMain, onClick = onAddImageBlock)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.weight(1f)) {
+                    SidebarButton("URL Imagem", Icons.Rounded.Image, colors.textMain, onClick = onAddImageBlock)
+                }
+                Box(Modifier.weight(1f)) {
+                    SidebarButton("Foto Galeria", Icons.Rounded.AddPhotoAlternate, colors.textMain, onClick = onPickGalleryImage)
+                }
+            }
         }
 
         // 3. ORGANIZAÇÃO
@@ -148,7 +565,14 @@ fun SidebarContent(
                     SidebarButton("JSON Import", Icons.Rounded.FileDownload, colors.textMain, onClick = onImp)
                 }
             }
-            SidebarButton("Exportar PDF (Native)", Icons.Rounded.PictureAsPdf, colors.textMain, onClick = onExportPdf)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.weight(1f)) {
+                    SidebarButton("Salvar PDF", Icons.Rounded.PictureAsPdf, colors.textMain, onClick = onExportPdf)
+                }
+                Box(Modifier.weight(1f)) {
+                    SidebarButton("Compartilhar", Icons.Rounded.Share, colors.accent, onClick = onSharePdf)
+                }
+            }
         }
 
         // Preferências & Footer
@@ -159,7 +583,7 @@ fun SidebarContent(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -170,6 +594,48 @@ fun SidebarContent(
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = Color(0xFF30D158),
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = Color.Gray.copy(0.35f)
+                    ),
+                    modifier = Modifier.scale(0.8f)
+                )
+            }
+
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("GRADE VISÍVEL", color = colors.textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Switch(
+                    checked = isGridEnabled,
+                    onCheckedChange = { onToggleGrid() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = colors.accent,
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = Color.Gray.copy(0.35f)
+                    ),
+                    modifier = Modifier.scale(0.8f)
+                )
+            }
+
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("BLOQUEAR EDIÇÃO", color = colors.textSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Switch(
+                    checked = isLocked,
+                    onCheckedChange = { onToggleLock() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = colors.danger,
                         uncheckedThumbColor = Color.White,
                         uncheckedTrackColor = Color.Gray.copy(0.35f)
                     ),
@@ -190,3 +656,4 @@ fun SidebarContent(
         )
     }
 }
+

@@ -75,4 +75,40 @@ object PdfExporter {
         document.writeTo(outputStream)
         document.close()
     }
+
+    fun sharePdf(
+        context: Context,
+        blocks: List<BlockEntity>,
+        canvasWidth: Int,
+        canvasHeight: Int,
+        fileName: String = "canvas_export.pdf"
+    ) {
+        try {
+            val cacheFile = java.io.File(context.cacheDir, fileName)
+            java.io.FileOutputStream(cacheFile).use { outputStream ->
+                exportCanvasToPdf(context, blocks, canvasWidth, canvasHeight, outputStream)
+            }
+            
+            val contentUri = androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                cacheFile
+            )
+            
+            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(android.content.Intent.EXTRA_STREAM, contentUri)
+                putExtra(android.content.Intent.EXTRA_SUBJECT, "Canvas Export - PDF")
+                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            
+            val chooser = android.content.Intent.createChooser(shareIntent, "Compartilhar PDF").apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooser)
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, "Erro ao compartilhar PDF: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 }

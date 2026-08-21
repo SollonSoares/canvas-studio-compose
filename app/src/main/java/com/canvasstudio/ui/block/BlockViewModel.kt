@@ -1,5 +1,6 @@
 package com.canvasstudio.ui.block
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.canvasstudio.data.repository.BlockRepository
@@ -85,6 +86,27 @@ class BlockViewModel(
 
     private val _currentProjectId = MutableStateFlow(0L)
     val currentProjectId: StateFlow<Long> = _currentProjectId.asStateFlow()
+
+    private val _selectedBlockId = MutableStateFlow<Long?>(null)
+    val selectedBlockId: StateFlow<Long?> = _selectedBlockId.asStateFlow()
+
+    fun selectBlock(block: BlockEntity?) {
+        _selectedBlockId.value = block?.id
+    }
+
+    fun selectBlockById(id: Long?) {
+        _selectedBlockId.value = id
+    }
+
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    val selectedBlock: StateFlow<BlockEntity?> = combine(
+        _currentProjectId.flatMapLatest { id -> blockRepository.getBlocksStream(id) },
+        _selectedBlockId
+    ) { blocks, selId ->
+        if (selId == null) null else blocks.find { it.id == selId }
+    }
+    .flowOn(Dispatchers.Default)
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val uiState = combine(
@@ -176,6 +198,314 @@ class BlockViewModel(
         _appliedQuery.value = _searchQuery.value
     }
 
+    fun importSharedUri(uri: Uri, intentType: String, context: android.content.Context) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            Log.d("CanvasStudio", "importSharedUri starting: uri=$uri, intentType=$intentType")
+            
+            var fileName = "Comprovante"
+            try {
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex >= 0 && cursor.moveToFirst()) {
+                        val name = cursor.getString(nameIndex)
+                        if (!name.isNullOrBlank()) fileName = name
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("CanvasStudio", "Could not query file name: ${e.message}")
+            }
+
+            val mime = try { context.contentResolver.getType(uri) ?: intentType } catch (e: Exception) { intentType }
+            Log.d("CanvasStudio", "Resolved fileName='$fileName', mime='$mime'")
+
+            val imagesDir = java.io.File(context.filesDir, "canvas_images").apply { mkdirs() }
+
+            // 1. Tentar como PDF se o MIME ou nome indicar PDF ou octet-stream
+            val isPdfCandidate = mime.contains("pdf", true) || fileName.endsWith(".pdf", true) || mime == "application/octet-stream" || mime == "*/*" || mime.isEmpty()
+            var savedFileUri: String? = null
+            var blockWidth = 280
+            var blockHeight = 380
+            var extractedOcrText = ""
+
+            if (isPdfCandidate) {
+                val tempPdf = java.io.File(context.cacheDir, "temp_shared_${System.currentTimeMillis()}.pdf")
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        java.io.FileOutputStream(tempPdf).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    if (tempPdf.exists() && tempPdf.length() > 0) {
+                        val pfd = android.os.ParcelFileDescriptor.open(tempPdf, android.os.ParcelFileDescriptor.MODE_READ_ONLY)
+                        val renderer = android.graphics.pdf.PdfRenderer(pfd)
+                        if (renderer.pageCount > 0) {
+                            val page = renderer.openPage(0)
+                            val scale = 2f
+                            val bW = (page.width * scale).toInt().coerceAtLeast(600)
+                            val bH = (page.height * scale).toInt().coerceAtLeast(800)
+                            val bitmap = android.graphics.Bitmap.createBitmap(bW, bH, android.graphics.Bitmap.Config.ARGB_8888)
+                            val canvas = android.graphics.Canvas(bitmap)
+                            canvas.drawColor(android.graphics.Color.WHITE)
+                            page.render(bitmap, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                            page.close()
+                            renderer.close()
+                            pfd.close()
+
+                            // OCR On-Device no comprovante renderizado
+                            extractedOcrText = com.canvasstudio.ui.block.utils.ReceiptAnalyzer.extractTextFromBitmap(bitmap)
+
+                            val destFile = java.io.File(imagesDir, "comprovante_${System.currentTimeMillis()}.jpg")
+                            java.io.FileOutputStream(destFile).use { out ->
+                                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
+                            }
+                            savedFileUri = "file://${destFile.absolutePath}"
+                            val ratio = bH.toFloat() / bW.toFloat()
+                            blockWidth = 320
+                            blockHeight = (320 * ratio).toInt() + 65
+                            Log.d("CanvasStudio", "PDF rendered and analyzed successfully to $savedFileUri")
+                        } else {
+                            renderer.close()
+                            pfd.close()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w("CanvasStudio", "PdfRenderer attempt failed: ${e.message}")
+                } finally {
+                    tempPdf.delete()
+                }
+            }
+
+            // 2. Se não era PDF ou falhou, tentar como Imagem (Bitmap)
+            if (savedFileUri == null) {
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        val bitmap = android.graphics.BitmapFactory.decodeStream(input)
+                        if (bitmap != null) {
+                            extractedOcrText = com.canvasstudio.ui.block.utils.ReceiptAnalyzer.extractTextFromBitmap(bitmap)
+                            
+                            val maxDim = 1920
+                            val w = bitmap.width
+                            val h = bitmap.height
+                            val scaled = if (w > maxDim || h > maxDim) {
+                                val r = w.toFloat() / h.toFloat()
+                                val (nw, nh) = if (w > h) Pair(maxDim, (maxDim / r).toInt()) else Pair((maxDim * r).toInt(), maxDim)
+                                android.graphics.Bitmap.createScaledBitmap(bitmap, nw, nh, true)
+                            } else bitmap
+
+                            val destFile = java.io.File(imagesDir, "img_${System.currentTimeMillis()}.jpg")
+                            java.io.FileOutputStream(destFile).use { out ->
+                                scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
+                            }
+                            savedFileUri = "file://${destFile.absolutePath}"
+                            val ratio = h.toFloat() / w.toFloat().coerceAtLeast(0.4f)
+                            blockWidth = 320
+                            blockHeight = (320 * ratio).toInt() + 65
+                            Log.d("CanvasStudio", "Image saved and analyzed successfully to $savedFileUri")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w("CanvasStudio", "Bitmap decode attempt failed: ${e.message}")
+                }
+            }
+
+            // 3. Análise Inteligente de Descrição (Título), Valor, Realizado em, Destinatário e Instituição via OCR
+            val analysis = com.canvasstudio.ui.block.utils.ReceiptAnalyzer.analyze(extractedOcrText, fileName)
+            val finalTitle = analysis.title
+            val finalValue = analysis.value
+            val finalValueFormatted = analysis.valueFormatted
+            val finalRealizadoEm = analysis.realizadoEm
+
+            val count = (uiState.value as? BlockUiState.Success)?.blocks?.size ?: 0
+            val spawnX = 60f + (count % 5) * 35f
+            val spawnY = 60f + (count % 5) * 35f
+
+            val block = if (savedFileUri != null) {
+                val content = buildJsonObject {
+                    put("url", savedFileUri)
+                    if (finalValue != null) put("valor", finalValue)
+                    if (finalValueFormatted != null) put("valorFormatted", finalValueFormatted)
+                    put("realizadoEm", finalRealizadoEm)
+                    if (analysis.isPix) put("isPix", true)
+                    if (analysis.pagador != null) put("pagador", analysis.pagador)
+                    if (analysis.destinatario != null) put("destinatario", analysis.destinatario)
+                    if (analysis.instituicao != null) put("instituicao", analysis.instituicao)
+                    if (extractedOcrText.isNotBlank()) put("rawText", extractedOcrText)
+                }.toString()
+                BlockEntity(
+                    projectId = _currentProjectId.value,
+                    title = finalTitle,
+                    type = "image",
+                    posX = spawnX,
+                    posY = spawnY,
+                    width = blockWidth,
+                    height = blockHeight,
+                    contentJson = content
+                )
+            } else {
+                val content = buildJsonObject {
+                    if (finalValue != null) put("valor", finalValue)
+                    if (finalValueFormatted != null) put("valorFormatted", finalValueFormatted)
+                    put("realizadoEm", finalRealizadoEm)
+                    if (analysis.isPix) put("isPix", true)
+                    if (analysis.pagador != null) put("pagador", analysis.pagador)
+                    if (analysis.destinatario != null) put("destinatario", analysis.destinatario)
+                    if (analysis.instituicao != null) put("instituicao", analysis.instituicao)
+                    val deStr = if (analysis.pagador != null) "\nDe (Pagador): ${analysis.pagador}" else ""
+                    val paraStr = if (analysis.destinatario != null) "\nPara (Destinatário): ${analysis.destinatario}" else ""
+                    val instStr = if (analysis.instituicao != null) "\nInstituição: ${analysis.instituicao}" else ""
+                    put("text", "📄 **$finalTitle**\n\nValor: ${finalValueFormatted ?: "N/D"}\nRealizado em: $finalRealizadoEm$deStr$paraStr$instStr\n\n$extractedOcrText")
+                    put("fontSize", 13)
+                    put("align", "left")
+                }.toString()
+                BlockEntity(
+                    projectId = _currentProjectId.value,
+                    title = finalTitle,
+                    type = "text",
+                    posX = spawnX,
+                    posY = spawnY,
+                    width = 260,
+                    height = 180,
+                    contentJson = content
+                )
+            }
+
+            blockRepository.insertBlock(block)
+            Log.d("CanvasStudio", "Inserted block ${block.title} into DB with valor=$finalValue, de=${analysis.pagador}, para=${analysis.destinatario}, inst=${analysis.instituicao}")
+            val msg = if (finalValueFormatted != null) "Comprovante '$finalTitle' ($finalValueFormatted) adicionado!" else "Item '$finalTitle' adicionado ao Canvas!"
+            _events.emit(msg)
+        } catch (e: Exception) {
+            Log.e("CanvasStudio", "Error in importSharedUri: ${e.message}", e)
+            _events.emit("Erro ao importar item compartilhado: ${e.message}")
+        }
+    }
+
+    fun importTextShared(text: String, subject: String? = null) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val analysis = com.canvasstudio.ui.block.utils.ReceiptAnalyzer.analyze(text, subject ?: "")
+            val finalTitle = analysis.title
+            val finalValue = analysis.value
+            val finalValueFormatted = analysis.valueFormatted
+            val finalRealizadoEm = analysis.realizadoEm
+
+            val count = (uiState.value as? BlockUiState.Success)?.blocks?.size ?: 0
+            val spawnX = 60f + (count % 5) * 35f
+            val spawnY = 60f + (count % 5) * 35f
+
+            val content = buildJsonObject {
+                if (finalValue != null) put("valor", finalValue)
+                if (finalValueFormatted != null) put("valorFormatted", finalValueFormatted)
+                put("realizadoEm", finalRealizadoEm)
+                if (analysis.isPix) put("isPix", true)
+                if (analysis.pagador != null) put("pagador", analysis.pagador)
+                if (analysis.destinatario != null) put("destinatario", analysis.destinatario)
+                if (analysis.instituicao != null) put("instituicao", analysis.instituicao)
+                put("text", text)
+                put("fontSize", 12)
+                put("align", "left")
+            }.toString()
+
+            val block = BlockEntity(
+                projectId = _currentProjectId.value,
+                title = finalTitle,
+                type = "text",
+                posX = spawnX,
+                posY = spawnY,
+                width = 280,
+                height = 200,
+                contentJson = content
+            )
+            blockRepository.insertBlock(block)
+            val msg = if (finalValueFormatted != null) "Comprovante '$finalTitle' ($finalValueFormatted) adicionado!" else "Texto compartilhado adicionado ao Canvas!"
+            _events.emit(msg)
+        } catch (e: Exception) {
+            _events.emit("Erro ao processar texto compartilhado: ${e.message}")
+        }
+    }
+
+    fun updateSelectedValue(newValue: Float?) {
+        val selected = selectedBlock.value ?: return
+        try {
+            val json = try { Json.parseToJsonElement(selected.contentJson).jsonObject } catch (e: Exception) { JsonObject(emptyMap()) }
+            val mutableMap = json.toMutableMap()
+            if (newValue != null && newValue > 0f) {
+                mutableMap["valor"] = JsonPrimitive(newValue)
+                mutableMap["valorFormatted"] = JsonPrimitive(com.canvasstudio.ui.block.utils.ReceiptAnalyzer.formatCurrency(newValue))
+            } else {
+                mutableMap.remove("valor")
+                mutableMap.remove("valorFormatted")
+            }
+            updateBlock(selected.copy(contentJson = JsonObject(mutableMap).toString()))
+        } catch (e: Exception) {
+            Log.e("BlockViewModel", "Error updating value: ${e.message}", e)
+        }
+    }
+
+    fun updateSelectedRealizadoEm(newDate: String) {
+        val selected = selectedBlock.value ?: return
+        try {
+            val json = try { Json.parseToJsonElement(selected.contentJson).jsonObject } catch (e: Exception) { JsonObject(emptyMap()) }
+            val mutableMap = json.toMutableMap()
+            if (newDate.isNotBlank()) {
+                mutableMap["realizadoEm"] = JsonPrimitive(newDate)
+            } else {
+                mutableMap.remove("realizadoEm")
+            }
+            updateBlock(selected.copy(contentJson = JsonObject(mutableMap).toString()))
+        } catch (e: Exception) {
+            Log.e("BlockViewModel", "Error updating realizadoEm: ${e.message}", e)
+        }
+    }
+
+    fun updateSelectedPagador(pagador: String) {
+        val selected = selectedBlock.value ?: return
+        try {
+            val json = try { Json.parseToJsonElement(selected.contentJson).jsonObject } catch (e: Exception) { JsonObject(emptyMap()) }
+            val mutableMap = json.toMutableMap()
+            if (pagador.isNotBlank()) {
+                mutableMap["pagador"] = JsonPrimitive(pagador)
+            } else {
+                mutableMap.remove("pagador")
+            }
+            updateBlock(selected.copy(contentJson = JsonObject(mutableMap).toString()))
+        } catch (e: Exception) {
+            Log.e("BlockViewModel", "Error updating pagador: ${e.message}", e)
+        }
+    }
+
+    fun updateSelectedDestinatario(destinatario: String) {
+        val selected = selectedBlock.value ?: return
+        try {
+            val json = try { Json.parseToJsonElement(selected.contentJson).jsonObject } catch (e: Exception) { JsonObject(emptyMap()) }
+            val mutableMap = json.toMutableMap()
+            if (destinatario.isNotBlank()) {
+                mutableMap["destinatario"] = JsonPrimitive(destinatario)
+            } else {
+                mutableMap.remove("destinatario")
+            }
+            updateBlock(selected.copy(contentJson = JsonObject(mutableMap).toString()))
+        } catch (e: Exception) {
+            Log.e("BlockViewModel", "Error updating destinatario: ${e.message}", e)
+        }
+    }
+
+    fun updateSelectedInstituicao(instituicao: String) {
+        val selected = selectedBlock.value ?: return
+        try {
+            val json = try { Json.parseToJsonElement(selected.contentJson).jsonObject } catch (e: Exception) { JsonObject(emptyMap()) }
+            val mutableMap = json.toMutableMap()
+            if (instituicao.isNotBlank()) {
+                mutableMap["instituicao"] = JsonPrimitive(instituicao)
+            } else {
+                mutableMap.remove("instituicao")
+            }
+            updateBlock(selected.copy(contentJson = JsonObject(mutableMap).toString()))
+        } catch (e: Exception) {
+            Log.e("BlockViewModel", "Error updating instituicao: ${e.message}", e)
+        }
+    }
+
+
+
     fun insertBlock(block: BlockEntity) = viewModelScope.launch { 
         blockRepository.insertBlock(block.copy(projectId = _currentProjectId.value)) 
     }
@@ -189,7 +519,84 @@ class BlockViewModel(
             blockRepository.updateBlock(block)
         }
     }
+
+    fun updateBlockContentText(block: BlockEntity, newText: String) {
+        try {
+            val json = try { Json.parseToJsonElement(block.contentJson).jsonObject } catch (e: Exception) { JsonObject(emptyMap()) }
+            val mutableMap = json.toMutableMap()
+            mutableMap["text"] = JsonPrimitive(newText)
+            mutableMap.remove("elements") // quando o usuário edita diretamente, converte para texto puro
+            val updatedContent = JsonObject(mutableMap).toString()
+            updateBlockLive(block.copy(contentJson = updatedContent))
+        } catch (e: Exception) {
+            updateBlockLive(block.copy(contentJson = buildJsonObject { put("text", newText) }.toString()))
+        }
+    }
+
+    fun updateSelectedTitle(title: String) {
+        val block = selectedBlock.value ?: return
+        updateBlockLive(block.copy(title = title))
+    }
+
+    fun updateSelectedFormatting(
+        fontSize: Int? = null,
+        isBold: Boolean? = null,
+        isItalic: Boolean? = null,
+        align: String? = null,
+        textColor: String? = null
+    ) {
+        val block = selectedBlock.value ?: return
+        try {
+            val json = try { Json.parseToJsonElement(block.contentJson).jsonObject } catch (e: Exception) { JsonObject(emptyMap()) }
+            val mutableMap = json.toMutableMap()
+            fontSize?.let { mutableMap["fontSize"] = JsonPrimitive(it) }
+            isBold?.let { mutableMap["isBold"] = JsonPrimitive(it) }
+            isItalic?.let { mutableMap["isItalic"] = JsonPrimitive(it) }
+            align?.let { mutableMap["align"] = JsonPrimitive(it) }
+            textColor?.let { 
+                if (it.isEmpty()) mutableMap.remove("textColor") else mutableMap["textColor"] = JsonPrimitive(it) 
+            }
+            val updatedContent = JsonObject(mutableMap).toString()
+            updateBlock(block.copy(contentJson = updatedContent))
+        } catch (e: Exception) {}
+    }
+
+    fun updateSelectedChartAttribute(attribute: String, value: Float) {
+        val block = selectedBlock.value ?: return
+        try {
+            val json = try { Json.parseToJsonElement(block.contentJson).jsonObject } catch (e: Exception) { JsonObject(emptyMap()) }
+            val mutableMap = json.toMutableMap()
+            mutableMap[attribute] = JsonPrimitive(value)
+            val updatedContent = JsonObject(mutableMap).toString()
+            updateBlockLive(block.copy(contentJson = updatedContent))
+        } catch (e: Exception) {}
+    }
+
+    fun updateSelectedImageUrl(url: String) {
+        val block = selectedBlock.value ?: return
+        try {
+            val json = try { Json.parseToJsonElement(block.contentJson).jsonObject } catch (e: Exception) { JsonObject(emptyMap()) }
+            val mutableMap = json.toMutableMap()
+            mutableMap["url"] = JsonPrimitive(url)
+            val updatedContent = JsonObject(mutableMap).toString()
+            updateBlock(block.copy(contentJson = updatedContent))
+        } catch (e: Exception) {}
+    }
+
+    fun duplicateBlock(block: BlockEntity) = viewModelScope.launch {
+        val newBlock = block.copy(
+            id = 0,
+            title = "${block.title} (Cópia)",
+            posX = block.posX + 30f,
+            posY = block.posY + 30f
+        )
+        blockRepository.insertBlock(newBlock.copy(projectId = _currentProjectId.value))
+    }
+
     fun deleteBlock(block: BlockEntity) = viewModelScope.launch { 
+        if (_selectedBlockId.value == block.id) {
+            _selectedBlockId.value = null
+        }
         blockRepository.deleteBlock(block) 
         try {
             val content = Json.parseToJsonElement(block.contentJson).jsonObject
@@ -201,6 +608,7 @@ class BlockViewModel(
     }
 
     fun clearCanvas() = viewModelScope.launch {
+        _selectedBlockId.value = null
         blockRepository.clearCanvas(_currentProjectId.value)
     }
     
@@ -275,52 +683,6 @@ class BlockViewModel(
         // Persistimos as novas coordenadas no banco de dados.
         blockRepository.insertBlocks(updatedBlocks)
         _events.emit("Canvas auto-organizado com sucesso!")
-    }
-
-    fun generateTestBlocks(count: Int) = viewModelScope.launch {
-        val testBlocks = mutableListOf<BlockEntity>()
-        val basePosX = 100f
-        val basePosY = 100f
-        
-        for (i in 1..count) {
-            val row = (i - 1) / 5
-            val col = (i - 1) % 5
-            val type = when(i % 3) {
-                0 -> "text"
-                1 -> "chart"
-                else -> "image"
-            }
-            val content = when(type) {
-                "text" -> buildJsonObject { 
-                    put("text", "Conteúdo de teste para o bloco $i. **Importante** validar a performance.")
-                    put("titleSize", 13)
-                    put("align", "left")
-                }.toString()
-                "chart" -> buildJsonObject {
-                    put("ninjutsu", (2..8).random().toFloat())
-                    put("inteligencia", (2..8).random().toFloat())
-                    put("chakra", (2..8).random().toFloat())
-                    put("taijutsu", (2..8).random().toFloat())
-                    put("vigor", (2..8).random().toFloat())
-                    put("genjutsu", (2..8).random().toFloat())
-                }.toString()
-                "image" -> buildJsonObject { put("url", "https://picsum.photos/seed/$i/200/200") }.toString()
-                else -> ""
-            }
-            
-            testBlocks.add(BlockEntity(
-                projectId = _currentProjectId.value,
-                title = "Bloco Teste $i",
-                type = type,
-                posX = basePosX + (col * 250f),
-                posY = basePosY + (row * 220f),
-                width = 220,
-                height = 180,
-                contentJson = content
-            ))
-        }
-        blockRepository.insertBlocks(testBlocks)
-        _events.emit("$count blocos de teste gerados!")
     }
 
     fun exportToJson(): String {

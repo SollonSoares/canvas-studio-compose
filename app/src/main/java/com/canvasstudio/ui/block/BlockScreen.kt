@@ -4,9 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -28,7 +26,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.canvasstudio.data.local.entity.BlockEntity
 import com.canvasstudio.ui.block.components.*
-import com.canvasstudio.ui.block.dialogs.EditBlockDialog
 import com.canvasstudio.ui.block.utils.PdfExporter
 import com.canvasstudio.ui.theme.CanvasTheme
 import kotlinx.coroutines.launch
@@ -41,7 +38,6 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
     val scaffoldState = rememberScaffoldState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var editingBlock by remember { mutableStateOf<BlockEntity?>(null) }
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val appliedQuery by viewModel.appliedQuery.collectAsStateWithLifecycle()
 
@@ -50,6 +46,8 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
     val isGridEnabled by viewModel.isGridEnabled.collectAsStateWithLifecycle()
     val isLocked by viewModel.isLocked.collectAsStateWithLifecycle()
     val canvasDimensions by viewModel.canvasDimensions.collectAsStateWithLifecycle()
+    val selectedBlockId by viewModel.selectedBlockId.collectAsStateWithLifecycle()
+    val selectedBlock by viewModel.selectedBlock.collectAsStateWithLifecycle()
     var showSettingsModal by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -113,15 +111,20 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
         }
     }
 
+    val galleryPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.importSharedUri(it, "image/*", context)
+        }
+    }
+
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
-    val transformState = rememberTransformableState { zoomChange, offsetChange, _ ->
-        scale = (scale * zoomChange).coerceIn(0.15f, 3f)
-        offset += offsetChange
-    }
 
     Scaffold(
         scaffoldState = scaffoldState,
+        drawerGesturesEnabled = scaffoldState.drawerState.isOpen,
         topBar = {
             TopAppBar(
                 title = { Text(brandTitle, color = colors.textMain, fontWeight = FontWeight.Bold) },
@@ -148,7 +151,7 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     val spawnX = ((-offset.x / density.density) + 200f) / scale
                     val spawnY = ((-offset.y / density.density) + 200f) / scale
                     viewModel.insertBlock(BlockEntity(0, 0, "Novo Bloco", "text", spawnX, spawnY, 220, 180, 
-                        "{\"text\":\"**Título**\\nEscreva aqui...\", \"titleSize\": 13, \"titleBold\": true, \"align\": \"left\"}"))
+                        "{\"text\":\"Novo texto aqui...\", \"fontSize\": 13, \"align\": \"left\"}"))
                 },
                 backgroundColor = colors.accent
             ) { Icon(Icons.Default.Add, "Adicionar", tint = Color.White) }
@@ -169,7 +172,6 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     viewModel.clearCanvas()
                     scope.launch { scaffoldState.drawerState.close() }
                 },
-                onGen = { viewModel.generateTestBlocks(50) },
                 onOrg = { 
                     viewModel.autoOrganizeBlocks()
                     scope.launch { scaffoldState.drawerState.close() }
@@ -190,7 +192,7 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     val spawnX = ((-offset.x / density.density) + 100f) / scale
                     val spawnY = ((-offset.y / density.density) + 100f) / scale
                     viewModel.insertBlock(BlockEntity(0, 0, "Novo Bloco", "text", spawnX, spawnY, 220, 180, 
-                        "{\"text\":\"**Título**\\nEscreva aqui...\", \"titleSize\": 13, \"align\": \"left\"}"))
+                        "{\"text\":\"Novo texto aqui...\", \"fontSize\": 13, \"align\": \"left\"}"))
                     scope.launch { scaffoldState.drawerState.close() }
                 },
                 onAddChartBlock = {
@@ -211,38 +213,80 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     pdfExportLauncher.launch("${brandTitle.replace(" ", "_")}_export.pdf")
                     scope.launch { scaffoldState.drawerState.close() }
                 },
+                onSharePdf = {
+                    if (uiState is BlockUiState.Success) {
+                        val (w, h) = canvasDimensions
+                        PdfExporter.sharePdf(
+                            context = context,
+                            blocks = (uiState as BlockUiState.Success).blocks,
+                            canvasWidth = w,
+                            canvasHeight = h,
+                            fileName = "${brandTitle.replace(" ", "_")}_export.pdf"
+                        )
+                    }
+                    scope.launch { scaffoldState.drawerState.close() }
+                },
+                onPickGalleryImage = {
+                    galleryPickerLauncher.launch("image/*")
+                    scope.launch { scaffoldState.drawerState.close() }
+                },
+                selectedBlock = selectedBlock,
+                onDeselectBlock = { viewModel.selectBlock(null) },
+                onUpdateTitle = { viewModel.updateSelectedTitle(it) },
+                onUpdateTextFormatting = { sz, b, it, al, col ->
+                    viewModel.updateSelectedFormatting(sz, b, it, al, col)
+                },
+                onUpdateChartAttribute = { attr, value ->
+                    viewModel.updateSelectedChartAttribute(attr, value)
+                },
+                onUpdateImageUrl = { url ->
+                    viewModel.updateSelectedImageUrl(url)
+                },
+                onUpdateValue = { valNum ->
+                    viewModel.updateSelectedValue(valNum)
+                },
+                onUpdateRealizadoEm = { dateStr ->
+                    viewModel.updateSelectedRealizadoEm(dateStr)
+                },
+                onUpdatePagador = { pag ->
+                    viewModel.updateSelectedPagador(pag)
+                },
+                onUpdateDestinatario = { dest ->
+                    viewModel.updateSelectedDestinatario(dest)
+                },
+                onUpdateInstituicao = { inst ->
+                    viewModel.updateSelectedInstituicao(inst)
+                },
+                onDuplicateBlock = {
+                    viewModel.duplicateBlock(it)
+                },
+                onDeleteBlock = {
+                    viewModel.deleteBlock(it)
+                },
                 colors = colors
             ) 
         }
     ) { padding ->
         Box(
-            Modifier.padding(padding).fillMaxSize().background(colors.bgMain)
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .background(colors.bgMain)
                 .pointerInput(Unit) {
-                    detectDragGestures { change, dragAmount ->
-                        change.consume()
-                        offset += dragAmount
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        scale = (scale * zoom).coerceIn(0.15f, 3f)
+                        offset += pan
                     }
                 }
-                .transformable(state = transformState)
         ) {
             val (canvasWidth, canvasHeight) = canvasDimensions
             
-            Box(Modifier.graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                translationX = offset.x
-                translationY = offset.y
-            }) {
-                Surface(
-                    modifier = Modifier.size(canvasWidth.dp, canvasHeight.dp),
-                    color = colors.bgMain,
-                    elevation = 2.dp,
-                    border = BorderStroke(1.dp, colors.canvasGrid)
-                ) {
-                    if (isGridEnabled) {
-                        CanvasBackground({ 1f }, { Offset.Zero }, colors.canvasGrid)
-                    }
-                }
+            if (isGridEnabled) {
+                CanvasBackground(
+                    scale = { scale },
+                    offset = { offset },
+                    gridColor = colors.canvasGrid
+                )
             }
 
             Box(Modifier.fillMaxSize().graphicsLayer {
@@ -255,23 +299,26 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
                     val blocks = (uiState as BlockUiState.Success).blocks
                     blocks.forEach { block ->
                         key(block.id) {
-                            DraggableBlock(block.id, block, 
-                                { x, y -> 
+                            DraggableBlock(
+                                key = block.id, 
+                                block = block, 
+                                onMove = { x, y -> 
                                     if (!isLocked) {
                                         val boundedX = x.coerceIn(0f, canvasWidth.toFloat() - block.width)
                                         val boundedY = y.coerceIn(0f, canvasHeight.toFloat() - block.height)
                                         viewModel.updateBlockLive(block.copy(posX = boundedX, posY = boundedY))
                                     }
                                 },
-                                { w, h -> 
+                                onResize = { w, h -> 
                                     if (!isLocked) {
                                         val boundedW = w.coerceIn(100, canvasWidth - block.posX.toInt())
                                         val boundedH = h.coerceIn(80, canvasHeight - block.posY.toInt())
                                         viewModel.updateBlockLive(block.copy(width = boundedW, height = boundedH))
                                     }
                                 },
-                                { if (!isLocked) viewModel.deleteBlock(block) },
-                                { editingBlock = block },
+                                onDelete = { if (!isLocked) viewModel.deleteBlock(block) },
+                                onSelect = { viewModel.selectBlock(block) },
+                                isSelected = block.id == selectedBlockId,
                                 currentScale = { scale },
                                 colors = colors,
                                 viewModel = viewModel
@@ -313,23 +360,6 @@ fun BlockScreen(uiState: BlockUiState, viewModel: BlockViewModel, onBack: () -> 
 
             if (uiState is BlockUiState.Loading) {
                 CircularProgressIndicator(Modifier.align(Alignment.Center), color = colors.accent)
-            }
-            
-            editingBlock?.let { block ->
-                val initialBlock = remember(block.id) { block }
-                EditBlockDialog(
-                    block = block, 
-                    onDismiss = { 
-                        viewModel.updateBlock(initialBlock)
-                        editingBlock = null 
-                    }, 
-                    onConfirm = { 
-                        viewModel.updateBlock(it)
-                        editingBlock = null 
-                    }, 
-                    onLiveUpdate = { viewModel.updateBlockLive(it) }, 
-                    colors = colors
-                )
             }
 
             if (showSettingsModal) {
