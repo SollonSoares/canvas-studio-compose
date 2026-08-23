@@ -4,7 +4,7 @@
 ### *Next-Gen Reactive Infinite Canvas Engine & On-Device Intelligence*
 
 <p align="center">
-  <strong>O estado da arte em engenharia visual, arquitetura reativa e design industrial para Android. Uma plataforma de workspace espacial infinito com renderização acelerada por GPU, Design System de Duplo Universo (Apple vs Teenage Engineering), pipeline de IA On-Device (Google ML Kit OCR), automação de commits na nuvem (GitHub REST API) e portabilidade bidirecional de dados.</strong>
+  <strong>O estado da arte em engenharia visual, arquitetura reativa e design industrial para Android. Uma plataforma de workspace espacial infinito com renderização acelerada por GPU, Design System de Duplo Universo (Apple vs Teenage Engineering), pipeline de IA On-Device (Google ML Kit OCR), automação de commits na nuvem (GitHub REST API), edição inline direta e portabilidade bidirecional de dados.</strong>
 </p>
 
 <p align="center">
@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/Architecture-Clean_%26_Feature--Flows-34C759?style=for-the-badge" alt="Clean Architecture">
   <img src="https://img.shields.io/badge/Intelligence-Google_ML_Kit-FF9500?style=for-the-badge&logo=google&logoColor=white" alt="ML Kit">
   <img src="https://img.shields.io/badge/Cloud_Sync-GitHub_REST_API-24292E?style=for-the-badge&logo=github&logoColor=white" alt="GitHub API">
+  <img src="https://img.shields.io/badge/Code_Quality-Max_200_Lines_%2F_File-informational?style=for-the-badge" alt="Clean Code">
 </p>
 
 ---
@@ -21,14 +22,16 @@
 ### 📑 Sumário Executivo & Arquitetural
 [1. Visão Geral](#-visão-geral-do-sistema) • 
 [2. Design System & Duplo Universo](#-design-system-centralizado--duplo-universo-visual) • 
-[3. Splash Screen Animada Cinematográfica](#-splash-screen-animada-cinematográfica) • 
-[4. Arquitetura Modular por Flows](#-arquitetura-modular-por-flows) • 
-[5. Motores de Engenharia & Performance GPU](#-motores-de-engenharia--performance-gpu) • 
-[6. Pipeline de IA & OCR On-Device](#-pipeline-de-ia--ocr-on-device) • 
-[7. Automação Cloud & Sync GitHub REST API](#-automação-cloud--sync-direto-github-rest-api) • 
-[8. Portabilidade & Esquema JSON v2.0.0](#-portabilidade-e-esquema-de-dados-v200) • 
-[9. Análise Quantitativa & Eficiência Algorítmica](#-análise-quantitativa-do-código--eficiência-algorítmica) • 
-[10. Guia de Execução e Build](#-guia-de-execução-e-engenharia)
+[3. Interação Espacial & Gestos](#-interação-espacial-gestos--drag--drop) • 
+[4. Edição Inline Direta & Inspetor](#-edição-inline-direta--inspetor-lateral) • 
+[5. Splash Screen Animada Cinematográfica](#-splash-screen-animada-cinematográfica) • 
+[6. Arquitetura Modular & Clean Code](#-arquitetura-modular--clean-code-200-linhas) • 
+[7. Motores de Engenharia & Performance GPU](#-motores-de-engenharia--performance-gpu) • 
+[8. Pipeline de IA & OCR On-Device](#-pipeline-de-ia--ocr-on-device) • 
+[9. Automação Cloud & Sync GitHub REST API](#-automação-cloud--sync-direto-github-rest-api) • 
+[10. Portabilidade & Esquema JSON v2.0.0](#-portabilidade-e-esquema-de-dados-v200) • 
+[11. Suíte de Testes Automatizados (43 Testes)](#-suíte-de-testes-automatizados-43-testes) • 
+[12. Guia de Execução e Build](#-guia-de-execução-e-engenharia)
 
 </div>
 
@@ -36,14 +39,16 @@
 
 ## 🌟 Visão Geral do Sistema
 
-O **Canvas Studio Compose** é um ambiente de computação espacial bidimensional de alta precisão projetado para manipulação livre de blocos (texto rico com markdown, mídia de alta resolução, gráficos vetoriais multieixo e comprovantes financeiros). Construído 100% sobre **Jetpack Compose**, o sistema elimina completamente o overhead de Views legadas através de transformações diretas em GPU e um micro-kernel reativo impulsionado por Kotlin Coroutines e StateFlow.
+O **Canvas Studio Compose** é um ambiente de computação espacial bidimensional infinito e de alta precisão projetado para manipulação livre de blocos (texto rico com formatação visual, mídia fotográfica da galeria/web, gráficos vetoriais multieixo e comprovantes financeiros). Construído 100% sobre **Jetpack Compose**, o sistema elimina completamente o overhead de Views legadas através de transformações diretas em GPU e um micro-kernel reativo impulsionado por Kotlin Coroutines e StateFlow.
 
 ### 💎 Principais Diferenciais Técnicos:
-* **Renderização 60/120 FPS cravados**: Transformações espaciais (Pan e Zoom infinito de `0.15x` a `3.0x`) desacopladas da fase de layout via `graphicsLayer`.
+* **Canvas Espacial Infinito com 60/120 FPS**: Transformações espaciais (Pan e Zoom de `0.15x` a `3.0x`) desacopladas da fase de layout via `graphicsLayer`, com dimensões de página aplicadas estritamente na exportação em PDF/Imagem.
+* **Seleção por Duplo Clique & Zoom Livre**: Toques simples e gestos de pinça (*pinch-to-zoom*) passam através dos blocos diretamente para o Canvas, garantindo navegação sem atrito mesmo em palcos densos de blocos.
+* **Edição Inline Direta**: Sem modais intrusivos para edição de conteúdo; o título é editado no cabeçalho do bloco, o texto no corpo do bloco e as propriedades detalhadas no Inspetor da Sidebar.
 * **Design System de Duplo Universo Estético**: Metamorfose completa em tempo real entre o minimalismo fluido da **Apple Cupertino (Sir Jony Ive)** e a engenharia física e tátil da **Teenage Engineering (Jesper Kouthoofd)**.
-* **On-Device Vision AI (OCR)**: Análise em tempo real de comprovantes bancários (PIX, TED, Tributos, Boletos) via **Google ML Kit Vision**, com extração inteligente de valores, partes (`De`/`Para`), instituição e timestamp.
-* **Automação de Commits Diretos no GitHub**: Sincronização e upload automático de imagens para o repositório [`SollonSoares/galeria`](https://github.com/SollonSoares/galeria) via GitHub Contents API, gerando URLs públicas no GitHub Pages em segundos.
-* **Shield de Memória & SQLite Anti-Crash**: Eliminação do estouro de `CursorWindow` (2MB) através do salvamento atômico em disco de arquivos locais (`file:///`) com *downsampling* inteligente de fotos pesadas da câmera (`inSampleSize`).
+* **Gestão Resiliente de Mídia & Galeria**: Importação atômica de fotos da galeria com armazenamento persistente em disco local (`canvas_images/`), eliminação de estouro de cursor SQLite e suporte nativo no Coil.
+* **On-Device Vision AI (OCR)**: Análise em tempo real de comprovantes bancários (PIX, TED, Tributos, Boletos) via **Google ML Kit Vision**, com extração inteligente de valores, partes (`De`/`Para`), instituição e data/hora.
+* **Clean Code Rigoroso**: Todos os arquivos do projeto seguem o padrão estrito de **$\le 200$ linhas por arquivo `.kt`**.
 
 ---
 
@@ -54,27 +59,56 @@ Todo o ecossistema visual do aplicativo é orquestrado pelo pacote `com.canvasst
 Ao alternar o tema nas **Configurações**, todo o aplicativo sofre uma **transformação estrutural de geometria, tipografia, bordas e grade**:
 
 ```
-┌───────────────────────────┬────────────────────────────────────────────────────────┐
+┌───────────────────────────┬────────────────────────────────┬───────────────────────────────┐
 │ ATRIBUTO DE ENGENHARIA    │ 🍏 1. APPLE CUPERTINO          │ 🎛️ 2. TEENAGE ENGINEERING      │
-├───────────────────────────┼────────────────────────────────┼───────────────────────┤
-│ Autor Inspirador          │ Sir Jony Ive                   │ Jesper Kouthoofd      │
-│ Filosofia                 │ Vidro, fluidez e pureza        │ Hardware mecânico e tátil       │
-│ Tipografia                │ Sans-Serif Proporcional        │ Monospaçada / DIN Técnica      │
+├───────────────────────────┼────────────────────────────────┼───────────────────────────────┤
+│ Autor Inspirador          │ Sir Jony Ive                   │ Jesper Kouthoofd              │
+│ Filosofia                 │ Vidro, fluidez e pureza        │ Hardware mecânico e tátil     │
+│ Tipografia                │ Sans-Serif Proporcional        │ Monospaçada / DIN Técnica     │
 │ Geometria dos Blocos      │ Squircles suaves (14dp - 24dp) │ Cantos usinados retos (4dp)   │
-│ Bordas dos Blocos         │ Hairline translúcida (1dp)     │ Chanfro sólido usinado (1.5dp) │
+│ Bordas dos Blocos         │ Hairline translúcida (1dp)     │ Chanfro sólido usinado (1.5dp)│
 │ Grade do Canvas           │ Pontos circulares polidos      │ Cruzetas técnicas de estúdio (+)|
 │ Badges Financeiros        │ Cápsulas ovais fluidas (999dp) │ Brackets de LED [ PIX ] [ R$ ] │
 │ Identificador do Módulo   │ Discreto e minimalista         │ LED luminoso indicador tátil  │
 │ Acento Primário           │ #0A84FF / #007AFF (Apple Blue) │ #FF4500 (OP-1 Signal Orange)  │
-└───────────────────────────┴────────────────────────────────┴───────────────────────┘
+└───────────────────────────┴────────────────────────────────┴───────────────────────────────┘
 ```
 
 ### 🧱 Componentes Atômicos Padronizados:
-* **`CanvasModal`**: Diálogo em 3 camadas (cabeçalho fixo com botão de fechar, corpo com rolagem independente e rodapé de ações ancorado que nunca sobrepõe o conteúdo).
-* **`CanvasToggle`**: Switch customizado com thumb branco, trilha no tom de destaque (`colors.accent`) e escala uniforme de `0.85f`.
+* **`CanvasModal`**: Diálogo em 3 camadas (cabeçalho com botão de fechar, corpo com rolagem independente e rodapé de ações ancorado que nunca sobrepõe o conteúdo).
+* **`CanvasToggle`**: Switch customizado com thumb branco, trilha no tom de destaque (`colors.accent`) e rótulo integrado perfeitamente alinhado.
 * **`CanvasButton`**: Botões tipados (`Primary`, `Secondary`, `Outlined`, `Ghost`, `Danger`) com ripple nativo e cantos estruturados.
 * **`CanvasTextField`**: Entradas de texto com foco reativo e estados de erro.
 * **`CanvasBadge`**: Pílulas de alta legibilidade para estados financeiros e tags com adaptação visual por tema.
+
+---
+
+## 🖐️ Interação Espacial, Gestos & Drag & Drop
+
+A interação com os blocos no Canvas foi desenvolvida para oferecer máxima precisão:
+
+1. **Gesto de Seleção por Duplo Toque (`onDoubleTap`)**:
+   - O toque duplo ativa a seleção do bloco e abre as propriedades no Inspetor da Sidebar.
+   - Toques simples e gestos de múltiplos dedos (*pan & pinch-to-zoom*) passam livremente para a navegação do Canvas sem bloquear a tela.
+2. **Arrasto Preciso (*Sub-Pixel Dragging*)**:
+   - Como o container do Canvas aplica transformações via `graphicsLayer`, as coordenadas do ponteiro são convertidas em densidade de tela (`drag.x / density.density`), garantindo resposta 1:1 sem saltos ou aceleração indevida.
+   - O cabeçalho inteiro do bloco funciona como área de toque suave para movimentação.
+   - Ao soltar o dedo, o bloco realiza *snap* magnético na grade de 10px e grava a nova posição no SQLite Room.
+3. **Redimensionamento Bidirecional**:
+   - Handle de redimensionamento no canto inferior direito com limites seguros (`100x80px` a `3000x3000px`).
+
+---
+
+## ✍️ Edição Inline Direta & Inspetor Lateral
+
+O fluxo de edição elimina diálogos modais sobrepostos:
+
+* **Edição de Título**: Campo de texto direto no topo de cada bloco ([`BlockHeader.kt`](app/src/main/java/com/canvasstudio/ui/block/components/BlockHeader.kt)).
+* **Edição de Conteúdo**: Campo de texto direto dentro da área útil do bloco ([`BlockContentEditor.kt`](app/src/main/java/com/canvasstudio/ui/block/components/BlockContentEditor.kt)).
+* **Inspetor na Sidebar ([`SidebarBlockInspector.kt`](app/src/main/java/com/canvasstudio/ui/block/components/SidebarBlockInspector.kt))**:
+  - Alinhamento de texto (Esquerda, Centro, Direita).
+  - Formatação tipográfica (Tamanho, Negrito, Itálico, Paleta de Cores Hexadecimal).
+  - Campos financeiros estruturados para comprovantes (Valor, Data/Hora, Pagador, Destinatário, Banco).
 
 ---
 
@@ -90,18 +124,18 @@ O componente [`SplashScreen.kt`](app/src/main/java/com/canvasstudio/ui/splash/Sp
 
 ---
 
-## 🏛️ Arquitetura Modular por Flows
+## 🏛️ Arquitetura Modular & Clean Code ($\le 200$ Linhas)
 
-O sistema adota os princípios de **Clean Architecture** e **Modular Feature-Driven Development**:
+O sistema segue rigorosamente o princípio de **Clean Architecture**, alta coesão e baixo acoplamento. Cada arquivo `.kt` possui responsabilidade única e não ultrapassa **200 linhas de código**.
 
 ```mermaid
 graph TD
     subgraph UI_LAYER ["🖥️ PRESENTATION LAYER (Jetpack Compose)"]
-        CS["CanvasScreen.kt<br/><i>(Viewport Coordinator & GPU Layer)</i>"]
-        SM["SettingsModal.kt<br/><i>(Configurações, GitHub Token & Temas)</i>"]
+        CS["BlockScreen.kt<br/><i>(Infinite Viewport & GPU Layer)</i>"]
+        SM["SettingsModal.kt<br/><i>(Configurações & Temas)</i>"]
         DB["DraggableBlock.kt<br/><i>(Atom Host com Gestos Touch)</i>"]
-        IN["SidebarContent.kt<br/><i>(Inspetor de Propriedades & Portabilidade)</i>"]
-        SP["SplashScreen.kt<br/><i>(Cinematic Animated Launch Engine)</i>"]
+        IN["SidebarContent.kt<br/><i>(Inspetor & Ações do Canvas)</i>"]
+        SP["SplashScreen.kt<br/><i>(Cinematic Animated Engine)</i>"]
     end
 
     subgraph DESIGN_SYSTEM ["🎨 DESIGN SYSTEM (com.canvasstudio.designsystem)"]
@@ -117,7 +151,7 @@ graph TD
     end
 
     subgraph DOMAIN_CORE ["🧠 DOMAIN & STATE (Unidirectional Data Flow)"]
-        VM["BlockViewModel.kt<br/><i>(Reactive State Hub & Coroutine Scope)</i>"]
+        VM["BlockViewModel.kt<br/><i>(Reactive State Hub & Coroutines)</i>"]
         CFG["CanvasConfig.kt<br/><i>(Domain Preferences)</i>"]
         RM["ReceiptModels.kt<br/><i>(Domain Models)</i>"]
     end
@@ -198,12 +232,6 @@ sequenceDiagram
     RoomDB-->>Canvas: Emite novo StateFlow e exibe Bloco instantaneamente com Badges
 ```
 
-### 🎯 Capacidades do Extrator:
-* **Identificação de Transação PIX**: Detecta chaves, termos bancários e aplica badge ciano `[PIX]`.
-* **Segregação Rigorosa de Partes**: Separação precisa entre Pagador/Origem (`De`) e Destinatário/Favorecido (`Para`), eliminando falsos positivos com preposições.
-* **Formatador Monetário**: Conversão de strings de OCR para floats numéricos auditáveis (`R$ 1.250,50` $\rightarrow$ `1250.50f`).
-* **Timestamp**: Captura e formatação de data/hora da realização do pagamento.
-
 ---
 
 ## 🌐 Automação Cloud & Sync Direto (GitHub REST API)
@@ -236,8 +264,6 @@ sequenceDiagram
 O Canvas Studio adota portabilidade bidirecional compatível com a Web através do serviço isolado `JsonPortabilityService`.
 
 ### 📑 Esquema JSON Exportado (`JSON Export`):
-Todos os valores financeiros, metadados e o **texto bruto completo do OCR (`rawText`)** são preservados diretamente dentro do array `campos` de cada bloco:
-
 ```json
 {
   "metadata": {
@@ -278,61 +304,23 @@ Todos os valores financeiros, metadados e o **texto bruto completo do OCR (`rawT
 
 ---
 
-## 📊 Análise Quantitativa do Código & Eficiência Algorítmica
+## 🧪 Suíte de Testes Automatizados (43 Testes)
 
-### 📈 1. Distribuição Quantitativa do Código por Subsistema
+O projeto possui uma suíte de testes automatizados com **100% de aprovação**, cobrindo desde a lógica pura na JVM até o ciclo de vida do SQLite e renderização de nós Jetpack Compose:
 
-O projeto é composto por **66 arquivos fonte**, somando **7.017 linhas de código puro (SLOC)** e **8.482 linhas totais**:
-
-| Subsistema | Arquivos | Linhas Totais | SLOC (Código) | Comentários | Linhas Branco | % do Código |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **UI & Canvas Engine (Compose)** | 18 | 4.240 | **3.862** | 83 | 295 | **55,0%** |
-| **Design System & Tokens** | 9 | 859 | **786** | 13 | 60 | **11,2%** |
-| **Suíte de Testes (Unit & AndroidTest)** | 9 | 1.059 | **825** | 80 | 154 | **11,8%** |
-| **Exportação, Sincronização e Portabilidade** | 4 | 745 | **652** | 15 | 78 | **9,3%** |
-| **Domínio, OCR & Inteligência Financeira** | 4 | 611 | **519** | 21 | 71 | **7,4%** |
-| **Camada de Dados (Room, DAOs, Prefs)** | 13 | 448 | **374** | 1 | 73 | **5,3%** |
-| **App Shell, Configurações & DI** | 9 | 560 | **524** | 8 | 28 | **7,5%** |
-| **TOTAL** | **66** | **8.482** | **7.017** | **220** | **1.245** | **100%** |
-
----
-
-### ⚙️ 2. Eficiência Algorítmica e Estruturas de Dados por Subsistema
-
-#### A. Engine Gráfica de Renderização (`CanvasBackground`, `DraggableBlock`, `ChartBlock`)
-* **Grade Infinita Zero-Allocation**: O componente `CanvasBackground` utiliza um buffer pré-alocado `FloatArray(16000)` memorizado via `remember`. Isso garante complexidade espacial de alocação $\mathcal{O}(1)$ na fase de desenho, eliminando coletas de lixo (*GC pauses*) a 60/120 FPS.
-* **Complexidade da Grade**: $\mathcal{O}\left(\frac{W_{\text{tela}} \times H_{\text{tela}}}{\text{snapSize}^2}\right)$, proporcional à área da viewport visível e independente do tamanho absoluto do Canvas.
-* **Transformações e Gestos**: O cálculo de coordenadas em `detectTransformGestures` e `detectDragGestures` opera em $\mathcal{O}(1)$ por evento de toque.
-* **Radar Chart**: Projeção trigonométrica polar $\rightarrow$ cartesiana em $\mathcal{O}(1)$ para $N=6$ vértices com escala autoajustável.
-
-#### B. Gerenciamento de Estado e Busca (`BlockViewModel`)
-* **Busca com Cache de Hash**: `getSearchableText` calcula $\text{hash} = \text{hash}(\text{title}) + \text{hash}(\text{contentJson})$. Com cache hit, a filtragem opera em $\mathcal{O}(B \times M)$ ($B = \text{blocos}, M = \text{termos}$), evitando re-parsing de JSON desnecessário.
-* **Auto-Organização Espacial 2D**: Algoritmo 2D Bin Packing guloso com ordenação alfabética em $\mathcal{O}(N \log N)$ de tempo e $\mathcal{O}(N)$ de memória.
-
-#### C. OCR e Inteligência Heurística (`ReceiptAnalyzer`, `SharedMediaImporter`)
-* **Proteção Proativa de Heap (Downsampling)**: Leitura de cabeçalho `inJustDecodeBounds` com escala exponencial $2^k$ (`inSampleSize`), limitando a alocação máxima a 2048px e reduzindo o consumo de RAM de $\approx 192\text{ MB}$ para $\le 16\text{ MB}$.
-* **Parser de Comprovantes**: Máquina de estados contextual com threshold de proximidade ($K \le 4$ linhas) e checagem em `Set` $\mathcal{O}(1)$ contra termos bancários proibidos (`INVALID_NAME_WORDS`), executando em tempo linear $\mathcal{O}(L)$ ($< 5\text{ ms}$).
-
-#### D. Portabilidade e I/O (`JsonPortabilityService`, `GallerySyncService`, `PdfExporter`)
-* **Parser JSON Universal**: Travessia em profundidade (DFS) $\mathcal{O}(\text{Nós})$ com suporte a estruturas chave-valor (Web) e arrays (Mobile).
-* **Streaming de Exportação**: O `PdfExporter` e o empacotador de ZIP utilizam streams contínuos (`PdfDocument`, `ZipOutputStream`), operando em $\mathcal{O}(1)$ de memória RAM adicional.
-
----
-
-### 📊 3. Tabela Comparativa de Complexidade dos Algoritmos
-
-| Algoritmo / Operação | Módulo / Arquivo | Complexidade Tempo (Pior Caso) | Complexidade Tempo (Médio) | Complexidade Espacial | Eficiência do Código |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **Grade Infinita (LOD)** | `CanvasBackground` | $\mathcal{O}(W_{\text{tela}} \cdot H_{\text{tela}} / \text{snap}^2)$ | $\mathcal{O}(W_{\text{tela}} \cdot H_{\text{tela}} / \text{snap}^2)$ | $\mathcal{O}(1)$ | 🟢 **Excelente** (Zero alloc no loop) |
-| **Busca com Cache de Hash** | `BlockViewModel` | $\mathcal{O}(B \cdot \text{size}(JSON))$ *(Miss)* | $\mathcal{O}(B \cdot M)$ *(Hit)* | $\mathcal{O}(B)$ | 🟢 **Excelente** (Evita reparse JSON) |
-| **Auto-Organização do Canvas** | `BlockViewModel` | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N)$ | 🟢 **Excelente** (2D Bin packing) |
-| **Downsampling de Imagens** | `SharedMediaImporter` | $\mathcal{O}(W \cdot H)$ | $\mathcal{O}\left(\frac{W \cdot H}{2^{2k}}\right)$ | $\mathcal{O}(1)$ | 🟢 **Excelente** (Proteção Anti-OOM) |
-| **Inferência OCR On-Device** | `ReceiptAnalyzer` | $\mathcal{O}(W_{\text{img}} \cdot H_{\text{img}})$ | $\mathcal{O}(W_{\text{img}} \cdot H_{\text{img}})$ | $\mathcal{O}(W_{\text{img}} \cdot H_{\text{img}})$ | 🟡 **Bom** (ML Kit NN inference) |
-| **Parser de Comprovantes** | `ReceiptAnalyzer` | $\mathcal{O}(L \cdot K)$ | $\mathcal{O}(L)$ | $\mathcal{O}(L)$ | 🟢 **Excelente** (Linear State Machine) |
-| **Parser Universal JSON** | `JsonPortabilityService` | $\mathcal{O}(\text{Nós})$ | $\mathcal{O}(\text{Nós})$ | $\mathcal{O}(\text{Profundidade})$ | 🟢 **Excelente** (DFS recursivo) |
-| **Parser de RichText/Markdown**| `RichTextHandler` | $\mathcal{O}(S)$ | $\mathcal{O}(S)$ | $\mathcal{O}(S)$ | 🟢 **Excelente** (Regex linear com spans) |
-| **Upload GitHub API (REST)** | `GitHubApiService` | $\mathcal{O}(\text{FileSize})$ | $\mathcal{O}(\text{FileSize})$ | $\mathcal{O}(\text{FileSize})$ | 🟡 **Bom** (Base64 em memória) |
-| **Exportação PDF Vetorial** | `PdfExporter` | $\mathcal{O}(B)$ | $\mathcal{O}(B)$ | $\mathcal{O}(1)$ extra | 🟢 **Excelente** (Streaming direto) |
+| Nível / Camada | Suíte de Teste | Quantidade | Falhas | Tempo de Execução | Escopo de Validação |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **1. Unitário (JVM Pura)** | `BlockPropertyUpdaterTest` | 7 | 0 | ~0.003s | Imutabilidade e mutação de JSON/metadados |
+| **1. Unitário (JVM Pura)** | `BlockViewModelTest` | 2 | 0 | ~0.090s | Fluxo de estados, busca reativa e preferências |
+| **1. Unitário (JVM Pura)** | `CanvasAutoOrganizerTest` | 5 | 0 | ~0.003s | Algoritmo 2D Bin Packing de auto-organização em grade |
+| **1. Unitário (JVM Pura)** | `CanvasSearchEngineTest` | 6 | 0 | ~0.004s | Filtragem em tempo real por títulos, tags e metadados |
+| **1. Unitário (JVM Pura)** | `JsonPortabilityTest` | 5 | 0 | ~0.110s | Serialização/Deserialização bidirecional Web $\leftrightarrow$ Mobile |
+| **1. Unitário (JVM Pura)** | `ReceiptExtractorsTest` | 8 | 0 | ~0.005s | Extração Regex de valores, PIX, bancos e partes |
+| **2. Integração (Robolectric)** | `MediaSharingIntegrationTest` | 2 | 0 | ~2.400s | Pipeline de importação de intents, Bitmaps e PDFs |
+| **2. Integração (Robolectric)** | `RoomRepositoryIntegrationTest`| 4 | 0 | ~0.170s | Persistência SQLite Room, queries reativas e transações |
+| **3. UI / Compose** | `DraggableBlockUiTest` | 2 | 0 | ~1.900s | Renderização de badges, duplicação e exclusão de blocos |
+| **3. UI / Compose** | `SidebarSearchHeaderUiTest` | 2 | 0 | ~0.220s | Interação com campo de busca e teclado na Sidebar |
+| **TOTAL** | **10 Suítes** | **43** | **0** | **~5.0s** | **100% de Cobertura e Aprovação** |
 
 ---
 
@@ -343,13 +331,13 @@ O projeto é composto por **66 arquivos fonte**, somando **7.017 linhas de códi
 * **Android SDK:** API Mínima 26 (Android 8.0 Oreo), API Alvo 34 (Android 14).
 * **Gradle:** 8.5+ com Kotlin 2.0.21.
 
-### 🛠️ Comandos de Build e Execução:
+### 🛠️ Comandos de Build e Testes:
 
 ```bash
 # 1. Compilação e Verificação Estática de Tipos
 ./gradlew compileDebugKotlin
 
-# 2. Execução dos Testes Unitários de Arquitetura
+# 2. Execução da Suíte Completa de 43 Testes
 ./gradlew testDebugUnitTest
 
 # 3. Geração do Pacote APK de Debug

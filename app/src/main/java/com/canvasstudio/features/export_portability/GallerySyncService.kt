@@ -2,6 +2,7 @@ package com.canvasstudio.features.export_portability
 
 import android.content.Context
 import android.net.Uri
+import android.util.Base64
 import android.util.Log
 import com.canvasstudio.data.local.entity.BlockEntity
 import kotlinx.coroutines.Dispatchers
@@ -80,7 +81,11 @@ class GallerySyncService(private val context: Context) {
                     var copySuccess = false
                     try {
                         if (currentUrl.startsWith("file://")) {
-                            val srcFile = File(currentUrl.removePrefix("file://"))
+                            val rawPath = currentUrl.removePrefix("file://")
+                            val cleanPath = if (rawPath.startsWith("/") && rawPath.length > 2 && rawPath[2] == ':') {
+                                rawPath.removePrefix("/")
+                            } else rawPath
+                            val srcFile = File(cleanPath)
                             if (srcFile.exists()) {
                                 srcFile.copyTo(destFile, overwrite = true)
                                 copySuccess = true
@@ -93,9 +98,23 @@ class GallerySyncService(private val context: Context) {
                                 }
                             }
                             copySuccess = destFile.exists() && destFile.length() > 0
+                        } else if (currentUrl.startsWith("/")) {
+                            val srcFile = File(currentUrl)
+                            if (srcFile.exists()) {
+                                srcFile.copyTo(destFile, overwrite = true)
+                                copySuccess = true
+                            }
+                        } else if (currentUrl.startsWith("data:")) {
+                            val base64Part = currentUrl.substringAfter("base64,", "")
+                            if (base64Part.isNotEmpty()) {
+                                val bytes = Base64.decode(base64Part, Base64.DEFAULT)
+                                destFile.writeBytes(bytes)
+                                copySuccess = destFile.exists() && destFile.length() > 0
+                            }
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
+                        errorMessages.add("Erro ao extrair imagem do bloco '${block.title}': ${e.message}")
                     }
 
                     if (copySuccess) {
@@ -120,15 +139,20 @@ class GallerySyncService(private val context: Context) {
                                 uploadResult.errorMessage?.let { errorMessages.add(it) }
                             }
                         }
+
+                        // Construir a URL pública definitiva da Galeria Web
+                        val publicUrl = "$cleanBaseUrl/$fileName"
+                        currentObj["url"] = JsonPrimitive(publicUrl)
+                        publicUrls.add(publicUrl)
+                        syncedCount++
+
+                        block.copy(contentJson = JsonObject(currentObj).toString())
+                    } else {
+                        if (!errorMessages.any { it.contains(block.title) }) {
+                            errorMessages.add("Não foi possível ler a imagem local do bloco '${block.title}'.")
+                        }
+                        block
                     }
-
-                    // Construir a URL pública definitiva da Galeria Web
-                    val publicUrl = "$cleanBaseUrl/$fileName"
-                    currentObj["url"] = JsonPrimitive(publicUrl)
-                    publicUrls.add(publicUrl)
-                    syncedCount++
-
-                    block.copy(contentJson = JsonObject(currentObj).toString())
                 } else {
                     block
                 }

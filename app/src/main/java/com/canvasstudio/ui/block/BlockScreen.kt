@@ -36,6 +36,7 @@ fun BlockScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val appliedQuery by viewModel.appliedQuery.collectAsStateWithLifecycle()
     val themeStyle by viewModel.themeStyle.collectAsStateWithLifecycle()
+    val isExportingImages by viewModel.isExportingImages.collectAsStateWithLifecycle()
 
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -65,14 +66,7 @@ fun BlockScreen(
     }
     val pdfExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri: Uri? ->
         uri?.let { destUri ->
-            if (uiState is BlockUiState.Success) {
-                try {
-                    context.contentResolver.openOutputStream(destUri)?.use { out ->
-                        val (w, h) = canvasDimensions
-                        PdfExporter.exportCanvasToPdf(context, uiState.blocks, w, h, out)
-                    }
-                } catch (e: Exception) {}
-            }
+            viewModel.exportToPdf(context, destUri)
         }
     }
     val galleryPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -81,7 +75,10 @@ fun BlockScreen(
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { msg ->
-            scaffoldState.snackbarHostState.showSnackbar(msg)
+            scaffoldState.snackbarHostState.showSnackbar(
+                message = msg,
+                duration = SnackbarDuration.Long
+            )
         }
     }
 
@@ -181,6 +178,10 @@ fun BlockScreen(
             }
 
             BlockFloatingZoomBar(scale = scale, onScaleChange = { scale = it }, onResetVision = { scale = 1f; offset = Offset.Zero }, colors = colors)
+
+            if (isExportingImages) {
+                CanvasExportLoadingOverlay(colors = colors)
+            }
         }
     }
 }

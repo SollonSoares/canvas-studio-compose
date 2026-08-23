@@ -166,6 +166,9 @@ class BlockViewModel(
         }
     }
 
+    private val _isExportingImages = MutableStateFlow(false)
+    val isExportingImages: StateFlow<Boolean> = _isExportingImages.asStateFlow()
+
     // Export & Portability
     fun exportToJson(): String {
         val blocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
@@ -173,10 +176,54 @@ class BlockViewModel(
     }
 
     fun syncToGallery(context: Context, onShareZip: (java.io.File) -> Unit = {}) = viewModelScope.launch(Dispatchers.IO) {
+        _isExportingImages.value = true
         try {
             val currentBlocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
             CanvasExportSyncCoordinator.syncToGallery(context, currentBlocks, galleryBaseUrl.value, githubToken.value, blockRepository, onShareZip) { _events.emit(it) }
-        } catch (e: Exception) { _events.emit("Erro ao sincronizar galeria: ${e.message}") }
+        } catch (e: Exception) {
+            _events.emit("❌ Erro ao sincronizar galeria: ${e.message}")
+        } finally {
+            _isExportingImages.value = false
+        }
+    }
+
+    fun exportToPdf(context: Context, uri: Uri) = viewModelScope.launch(Dispatchers.IO) {
+        _isExportingImages.value = true
+        try {
+            val currentBlocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
+            context.contentResolver.openOutputStream(uri)?.use { out ->
+                com.canvasstudio.ui.block.utils.PdfExporter.exportCanvasToPdf(
+                    context = context,
+                    blocks = currentBlocks,
+                    outputStream = out,
+                    documentTitle = brandTitle.value
+                )
+            }
+            _events.emit("✅ PDF A4 exportado com sucesso!")
+        } catch (e: Exception) {
+            _events.emit("❌ Erro ao exportar PDF: ${e.message}")
+        } finally {
+            _isExportingImages.value = false
+        }
+    }
+
+    fun sharePdf(context: Context, fileName: String = "canvas_export.pdf") = viewModelScope.launch(Dispatchers.IO) {
+        _isExportingImages.value = true
+        try {
+            val currentBlocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
+            val file = com.canvasstudio.ui.block.utils.PdfExporter.generatePdfFile(
+                context = context,
+                blocks = currentBlocks,
+                documentTitle = brandTitle.value,
+                fileName = fileName
+            )
+            com.canvasstudio.ui.block.utils.PdfExporter.openShareIntent(context, file)
+            _events.emit("📄 PDF pronto para compartilhamento!")
+        } catch (e: Exception) {
+            _events.emit("❌ Erro ao compartilhar PDF: ${e.message}")
+        } finally {
+            _isExportingImages.value = false
+        }
     }
 
     fun loadDefaultTemplate(context: Context, clearFirst: Boolean = false) = viewModelScope.launch {

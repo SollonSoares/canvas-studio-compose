@@ -148,4 +148,9 @@ class BlockViewModelTest {
         assertTrue(jsonExported.contains("brand"))
         assertTrue(jsonExported.contains("blocos"))
     }
+
+    @Test
+    fun `isExportingImages deve iniciar como false`() {
+        assertEquals(false, viewModel.isExportingImages.value)
+    }
 }

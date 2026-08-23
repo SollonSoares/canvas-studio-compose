@@ -67,10 +67,7 @@ fun BlockDrawerWrapper(
         },
         onExportPdf = onLaunchPdfExport,
         onSharePdf = {
-            if (uiState is BlockUiState.Success) {
-                val (w, h) = canvasDimensions
-                PdfExporter.sharePdf(context, uiState.blocks, w, h, "${brandTitle.replace(" ", "_")}_export.pdf")
-            }
+            viewModel.sharePdf(context, "${brandTitle.replace(" ", "_")}_export.pdf")
             onCloseDrawer()
         },
         onPickGalleryImage = onLaunchGalleryPicker,

@@ -19,18 +19,34 @@ object CanvasExportSyncCoordinator {
         onEmitEvent: suspend (String) -> Unit
     ) {
         if (blocks.none { it.type.equals("image", ignoreCase = true) }) {
-            onEmitEvent("Nenhuma imagem encontrada no Canvas para sincronizar.")
+            onEmitEvent("ℹ️ Nenhuma imagem encontrada no Canvas para exportar ou alterar links.")
             return
         }
         val syncService = GallerySyncService(context)
         val result = syncService.syncBlocksToGallery(blocks, galleryBaseUrl, githubToken)
         if (result.syncedCount > 0) {
             result.updatedBlocks.forEach { blockRepository.updateBlock(it) }
-            val msg = if (result.githubUploadedCount > 0) "🚀 ${result.githubUploadedCount} imagem(ns) enviadas para o GitHub!" else "${result.syncedCount} imagem(ns) preparadas!"
+            val msg = buildString {
+                if (githubToken.isNotBlank()) {
+                    if (result.githubUploadedCount == result.syncedCount) {
+                        append("✅ Sucesso: ${result.syncedCount} imagem(ns) exportadas, enviadas ao GitHub e links alterados no Canvas!")
+                    } else if (result.githubUploadedCount > 0) {
+                        append("⚠️ ${result.syncedCount} imagem(ns) exportadas e links alterados, com ${result.githubUploadedCount}/${result.syncedCount} enviadas ao GitHub.")
+                    } else {
+                        append("⚠️ ${result.syncedCount} imagem(ns) exportadas e links alterados no Canvas, mas falhou o upload no GitHub.")
+                    }
+                } else {
+                    append("✅ Sucesso: ${result.syncedCount} imagem(ns) exportadas e links alterados com sucesso para a Galeria Web!")
+                }
+            }
             onEmitEvent(msg)
             result.zipFile?.let { onShareZip(it) }
         } else {
-            onEmitEvent("Todas as imagens do Canvas já possuem links públicos da Galeria!")
+            if (result.errorMessages.isNotEmpty()) {
+                onEmitEvent("❌ Falha ao exportar imagens: ${result.errorMessages.first()}")
+            } else {
+                onEmitEvent("ℹ️ Todas as imagens do Canvas já possuem links públicos da Galeria!")
+            }
         }
     }
 
