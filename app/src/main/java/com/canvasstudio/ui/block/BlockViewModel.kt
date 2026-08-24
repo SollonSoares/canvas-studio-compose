@@ -15,9 +15,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.*
 
 class BlockViewModel(
     private val blockRepository: BlockRepository,
@@ -38,8 +36,8 @@ class BlockViewModel(
     val isLocked = userPreferencesManager.isLockedFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val themeStyle = userPreferencesManager.themeStyleFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "cupertino")
     val galleryBaseUrl = userPreferencesManager.galleryBaseUrlFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "https://sollonsoares.github.io/galeria/imagens/")
-    val githubToken = userPreferencesManager.githubTokenFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
-    val canvasDimensions = userPreferencesManager.canvasDimensionsFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(2000, 2000))
+    val authorName = userPreferencesManager.authorNameFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    val canvasDimensions = userPreferencesManager.canvasDimensionsFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(10000, 10000))
 
     private val _canvasConfig = MutableStateFlow(CanvasConfig())
     val canvasConfig: StateFlow<CanvasConfig> = _canvasConfig.asStateFlow()
@@ -53,7 +51,7 @@ class BlockViewModel(
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val selectedBlock: StateFlow<BlockEntity?> = combine(_currentProjectId.flatMapLatest { blockRepository.getBlocksStream(it) }, _selectedBlockId) { blocks, selId ->
         if (selId == null) null else blocks.find { it.id == selId }
-    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     val uiState = combine(_currentProjectId.flatMapLatest { blockRepository.getBlocksStream(it) }, appliedQuery, userPreferencesManager.modulesStateFlow) { blocks, query, modules ->
@@ -65,6 +63,7 @@ class BlockViewModel(
     fun setThemeStyle(style: String) = viewModelScope.launch { userPreferencesManager.setThemeStyle(style) }
     fun setGalleryBaseUrl(url: String) = viewModelScope.launch { userPreferencesManager.setGalleryBaseUrl(url) }
     fun setGithubToken(token: String) = viewModelScope.launch { userPreferencesManager.setGithubToken(token) }
+    fun setAuthorName(name: String) = viewModelScope.launch { userPreferencesManager.setAuthorName(name) }
     fun toggleGrid() = viewModelScope.launch { userPreferencesManager.setGridEnabled(!isGridEnabled.value) }
     fun toggleLock() = viewModelScope.launch { userPreferencesManager.setLocked(!isLocked.value) }
     fun setBrandTitle(title: String) = viewModelScope.launch { userPreferencesManager.setBrandTitle(title) }
@@ -120,6 +119,57 @@ class BlockViewModel(
     fun updateSelectedChartAttribute(attr: String, value: Float) { selectedBlock.value?.let { updateBlockLive(BlockPropertyUpdater.updateChartAttribute(it, attr, value)) } }
     fun updateSelectedImageUrl(url: String) { selectedBlock.value?.let { updateBlock(BlockPropertyUpdater.updateImageUrl(it, url)) } }
 
+    fun insertTable(block: BlockEntity) {
+        val currentContent = try {
+            val json = Json.parseToJsonElement(block.contentJson).jsonObject
+            val campos = json["campos"]?.jsonArray
+            if (!campos.isNullOrEmpty()) {
+                campos.joinToString("\n") { (it as? JsonObject)?.get("html")?.jsonPrimitive?.contentOrNull ?: it.jsonPrimitive.contentOrNull ?: "" }
+            } else {
+                json["text"]?.jsonPrimitive?.contentOrNull ?: json["html"]?.jsonPrimitive?.contentOrNull ?: ""
+            }
+        } catch (e: Exception) { "" }
+
+        val tableHtml = """<table style="color: rgb(240, 242, 248); width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 11px; margin: 6px 0;"><thead><tr style="background: rgba(45, 45, 45, 0.9); color: rgb(79, 195, 247);"><th style="border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 6px; text-align: left;">Coluna 1</th><th style="border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 6px; text-align: left;">Coluna 2</th></tr></thead><tbody><tr><td style="border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 6px; background-color: rgba(30, 30, 30, 0.6);">Item 1</td><td style="border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 6px; background-color: rgba(30, 30, 30, 0.6);">Valor 1</td></tr><tr><td style="border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 6px; background-color: rgba(30, 30, 30, 0.6);">Item 2</td><td style="border: 1px solid rgba(255, 255, 255, 0.15); padding: 4px 6px; background-color: rgba(30, 30, 30, 0.6);">Valor 2</td></tr></tbody></table><div><br></div>"""
+        val newContent = if (currentContent.isNotBlank()) "$currentContent\n$tableHtml" else tableHtml
+        updateBlockContentText(block, newContent)
+    }
+
+    fun insertCallout(block: BlockEntity) {
+        val currentContent = try {
+            val json = Json.parseToJsonElement(block.contentJson).jsonObject
+            json["text"]?.jsonPrimitive?.contentOrNull ?: json["html"]?.jsonPrimitive?.contentOrNull ?: ""
+        } catch (e: Exception) { "" }
+        val calloutHtml = """<div style="background: rgba(2,132,199,0.12); border: 1px solid rgba(2,132,199,0.35); border-radius: 6px; padding: 6px 10px; margin: 6px 0; color: #f0f2f8; font-size: 12px;">Texto destacado...</div><div><br></div>"""
+        val newContent = if (currentContent.isNotBlank()) "$currentContent\n$calloutHtml" else calloutHtml
+        updateBlockContentText(block, newContent)
+    }
+
+    fun insertCollapsible(block: BlockEntity) {
+        val currentContent = try {
+            val json = Json.parseToJsonElement(block.contentJson).jsonObject
+            json["text"]?.jsonPrimitive?.contentOrNull ?: json["html"]?.jsonPrimitive?.contentOrNull ?: ""
+        } catch (e: Exception) { "" }
+        val collapsibleHtml = """<details style="background: rgba(2,132,199,0.08); border: 1px solid rgba(2,132,199,0.3); border-radius: 6px; padding: 6px 10px; margin: 6px 0;"><summary style="cursor: pointer; font-weight: bold; color: #0284c7;">Título Expansível</summary><div style="margin-top: 4px; font-size: 12px;">Linha 1 do texto detalhado.<br>Linha 2 do texto detalhado.<br>Linha 3 do texto detalhado.<br>Linha 4 do texto expandido...</div></details><div><br></div>"""
+        val newContent = if (currentContent.isNotBlank()) "$currentContent\n$collapsibleHtml" else collapsibleHtml
+        updateBlockContentText(block, newContent)
+    }
+
+    fun insertList(block: BlockEntity) {
+        val currentContent = try {
+            val json = Json.parseToJsonElement(block.contentJson).jsonObject
+            json["text"]?.jsonPrimitive?.contentOrNull ?: json["html"]?.jsonPrimitive?.contentOrNull ?: ""
+        } catch (e: Exception) { "" }
+        val listHtml = """<ul style="margin: 6px 0; padding-left: 18px;"><li>Item 1</li><li>Item 2</li></ul><div><br></div>"""
+        val newContent = if (currentContent.isNotBlank()) "$currentContent\n$listHtml" else listHtml
+        updateBlockContentText(block, newContent)
+    }
+
+    fun insertTableIntoSelected() { selectedBlock.value?.let { insertTable(it) } }
+    fun insertCalloutIntoSelected() { selectedBlock.value?.let { insertCallout(it) } }
+    fun insertCollapsibleIntoSelected() { selectedBlock.value?.let { insertCollapsible(it) } }
+    fun insertListIntoSelected() { selectedBlock.value?.let { insertList(it) } }
+
     // Media & Import Controls
     fun importSharedUri(context: Context, uri: Uri) = viewModelScope.launch(Dispatchers.IO) {
         try {
@@ -140,100 +190,67 @@ class BlockViewModel(
         } catch (e: Exception) { _events.emit("Erro ao atualizar imagem: ${e.message}") }
     }
 
-    fun importTextShared(text: String, subject: String? = null) = viewModelScope.launch(Dispatchers.IO) {
-        try {
-            val count = (uiState.value as? BlockUiState.Success)?.blocks?.size ?: 0
-            val spawn = 60f + (count % 5) * 35f
-            val (block, msg) = CanvasMediaCoordinator.importText(text, subject, spawn, spawn, _currentProjectId.value)
-            blockRepository.insertBlock(block)
-            _events.emit(msg)
-        } catch (e: Exception) { _events.emit("Erro ao processar texto: ${e.message}") }
-    }
-
-    fun getCachedImage(imgId: String, onResult: (String?) -> Unit) = viewModelScope.launch { onResult(blockRepository.getCachedImage(imgId)) }
-    fun cacheImage(imgId: String, url: String) = viewModelScope.launch(Dispatchers.IO) {
-        if (blockRepository.getCachedImage(imgId) != null) return@launch
-        CanvasMediaCoordinator.downloadImageBase64(url)?.let { blockRepository.saveImageCache(imgId, it) }
-    }
-
-    // Auto-organize
-    fun autoOrganizeBlocks() = viewModelScope.launch {
-        val allBlocks = blockRepository.getBlocksStream(_currentProjectId.value).first()
-        val updated = CanvasAutoOrganizer.organize(allBlocks, canvasDimensions.value.first)
-        if (updated.isNotEmpty()) {
-            blockRepository.insertBlocks(updated)
-            _events.emit("Canvas auto-organizado com sucesso!")
-        }
-    }
-
-    private val _isExportingImages = MutableStateFlow(false)
-    val isExportingImages: StateFlow<Boolean> = _isExportingImages.asStateFlow()
-
-    // Export & Portability
+    // Export Controls
     fun exportToJson(): String {
         val blocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
         return JsonPortabilityService.exportToJson(brandTitle.value, blocks)
     }
 
-    fun syncToGallery(context: Context, onShareZip: (java.io.File) -> Unit = {}) = viewModelScope.launch(Dispatchers.IO) {
-        _isExportingImages.value = true
+    fun importFromJson(jsonString: String) = viewModelScope.launch(Dispatchers.IO) {
         try {
-            val currentBlocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
-            CanvasExportSyncCoordinator.syncToGallery(context, currentBlocks, galleryBaseUrl.value, githubToken.value, blockRepository, onShareZip) { _events.emit(it) }
+            val (brand, blocks) = JsonPortabilityService.parseBlocksFromJson(jsonString, _currentProjectId.value)
+            brand?.let { userPreferencesManager.setBrandTitle(it) }
+            blockRepository.insertBlocks(blocks)
+            _events.emit("Importados ${blocks.size} blocos com sucesso!")
         } catch (e: Exception) {
-            _events.emit("❌ Erro ao sincronizar galeria: ${e.message}")
-        } finally {
-            _isExportingImages.value = false
+            _events.emit("Erro ao importar JSON: ${e.message}")
         }
     }
 
-    fun exportToPdf(context: Context, uri: Uri) = viewModelScope.launch(Dispatchers.IO) {
-        _isExportingImages.value = true
+    fun exportToPdf(context: Context, destinationUri: Uri) = viewModelScope.launch(Dispatchers.IO) {
+        val blocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
+        if (blocks.isEmpty()) {
+            _events.emit("O canvas está vazio. Nada para exportar.")
+            return@launch
+        }
+        val isDark = userPreferencesManager.darkModeFlow.first()
+        val author = userPreferencesManager.authorNameFlow.first()
+        PdfExporter.exportBlocksToPdf(context, blocks, destinationUri, brandTitle.value, author, isDark) { success, msg ->
+            viewModelScope.launch { _events.emit(msg) }
+        }
+    }
+
+    fun sharePdf(context: Context, filename: String) = viewModelScope.launch(Dispatchers.IO) {
+        val blocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
+        if (blocks.isEmpty()) {
+            _events.emit("O canvas está vazio. Nada para compartilhar.")
+            return@launch
+        }
+        val isDark = userPreferencesManager.darkModeFlow.first()
+        val author = userPreferencesManager.authorNameFlow.first()
+        PdfExporter.exportAndSharePdf(context, blocks, filename, brandTitle.value, author, isDark) { success, msg ->
+            viewModelScope.launch { _events.emit(msg) }
+        }
+    }
+
+    fun syncToGallery(context: Context) = viewModelScope.launch(Dispatchers.IO) {
         try {
-            val currentBlocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
-            context.contentResolver.openOutputStream(uri)?.use { out ->
-                com.canvasstudio.ui.block.utils.PdfExporter.exportCanvasToPdf(
-                    context = context,
-                    blocks = currentBlocks,
-                    outputStream = out,
-                    documentTitle = brandTitle.value
-                )
+            val blocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
+            val token = userPreferencesManager.githubTokenFlow.first()
+            val author = userPreferencesManager.authorNameFlow.first()
+            val baseUrl = userPreferencesManager.galleryBaseUrlFlow.first()
+            val res = CanvasMediaCoordinator.syncImagesToGallery(context, blocks, token, author, baseUrl) { updated ->
+                blockRepository.updateBlocks(updated)
             }
-            _events.emit("✅ PDF A4 exportado com sucesso!")
+            _events.emit(res)
         } catch (e: Exception) {
-            _events.emit("❌ Erro ao exportar PDF: ${e.message}")
-        } finally {
-            _isExportingImages.value = false
+            _events.emit("Erro ao sincronizar galeria: ${e.message}")
         }
     }
 
-    fun sharePdf(context: Context, fileName: String = "canvas_export.pdf") = viewModelScope.launch(Dispatchers.IO) {
-        _isExportingImages.value = true
-        try {
-            val currentBlocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
-            val file = com.canvasstudio.ui.block.utils.PdfExporter.generatePdfFile(
-                context = context,
-                blocks = currentBlocks,
-                documentTitle = brandTitle.value,
-                fileName = fileName
-            )
-            com.canvasstudio.ui.block.utils.PdfExporter.openShareIntent(context, file)
-            _events.emit("📄 PDF pronto para compartilhamento!")
-        } catch (e: Exception) {
-            _events.emit("❌ Erro ao compartilhar PDF: ${e.message}")
-        } finally {
-            _isExportingImages.value = false
-        }
-    }
-
-    fun loadDefaultTemplate(context: Context, clearFirst: Boolean = false) = viewModelScope.launch {
-        try {
-            val jsonString = context.assets.open("default_template.json").bufferedReader().use { it.readText() }
-            importFromJson(jsonString, clearFirst)
-        } catch (e: Exception) { _events.emit("Erro ao carregar ficha padrão: ${e.message}") }
-    }
-
-    fun importFromJson(jsonString: String, clearFirst: Boolean = false) = viewModelScope.launch {
-        CanvasExportSyncCoordinator.importFromJson(jsonString, _currentProjectId.value, clearFirst, blockRepository, { setBrandTitle(it) }) { _events.emit(it) }
+    fun autoOrganizeBlocks() = viewModelScope.launch(Dispatchers.Default) {
+        val blocks = (uiState.value as? BlockUiState.Success)?.blocks ?: return@launch
+        val organized = CanvasAutoOrganizer.organize(blocks, _canvasConfig.value.canvasWidth)
+        blockRepository.updateBlocks(organized)
     }
 }

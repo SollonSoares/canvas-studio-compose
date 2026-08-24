@@ -57,7 +57,8 @@ class GallerySyncServiceTest {
 
         val result = syncService.syncBlocksToGallery(
             blocks = listOf(block),
-            galleryBaseUrl = "https://sollonsoares.github.io/galeria/imagens"
+            galleryBaseUrl = "https://sollonsoares.github.io/galeria/imagens",
+            authorIdentifier = "sollon"
         )
 
         assertEquals(1, result.syncedCount)
@@ -66,7 +67,7 @@ class GallerySyncServiceTest {
 
         val updatedJson = Json.parseToJsonElement(result.updatedBlocks.first().contentJson).jsonObject
         val newUrl = updatedJson["url"]?.jsonPrimitive?.content ?: ""
-        assertTrue(newUrl.startsWith("https://sollonsoares.github.io/galeria/imagens/foto_de_teste_10.jpg"))
+        assertEquals("https://sollonsoares.github.io/galeria/imagens/foto_de_teste_sollon_10.jpg", newUrl)
     }
 
     @Test

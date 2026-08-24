@@ -14,6 +14,8 @@ import com.canvasstudio.ui.theme.CanvasColors
 fun SettingsModal(
     title: String,
     onTitleChange: (String) -> Unit,
+    authorName: String = "",
+    onAuthorNameChange: (String) -> Unit = {},
     themeStyle: String,
     onThemeStyleChange: (String) -> Unit,
     galleryBaseUrl: String,
@@ -44,6 +46,8 @@ fun SettingsModal(
         SettingsGeneralSection(
             title = title,
             onTitleChange = onTitleChange,
+            authorName = authorName,
+            onAuthorNameChange = onAuthorNameChange,
             galleryBaseUrl = galleryBaseUrl,
             onGalleryBaseUrlChange = onGalleryBaseUrlChange,
             githubToken = githubToken,

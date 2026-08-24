@@ -1,6 +1,7 @@
 package com.canvasstudio.features.export_portability
 
 import com.canvasstudio.data.local.entity.BlockEntity
+import com.canvasstudio.ui.block.modules.ShinobiChartCalculator
 import kotlinx.serialization.json.*
 
 object JsonBlockParser {
@@ -11,8 +12,8 @@ object JsonBlockParser {
         val newBlocks = mutableListOf<BlockEntity>()
 
         val rootObj = jsonElement.jsonObject
-        val brand = rootObj["metadata"]?.jsonObject?.get("brand")?.jsonPrimitive?.content
-            ?: rootObj["app_brand_title"]?.jsonPrimitive?.content
+        val brand = rootObj["metadata"]?.jsonObject?.get("brand")?.jsonPrimitive?.contentOrNull
+            ?: rootObj["app_brand_title"]?.jsonPrimitive?.contentOrNull
 
         fun extractBlocks(element: JsonElement) {
             when (element) {
@@ -51,9 +52,9 @@ object JsonBlockParser {
             else -> obj.toString()
         }
 
-        val posX = obj["left"]?.jsonPrimitive?.content?.replace("px", "")?.toFloatOrNull()
+        val posX = obj["left"]?.jsonPrimitive?.contentOrNull?.replace("px", "")?.toFloatOrNull()
             ?: obj["posX"]?.jsonPrimitive?.floatOrNull ?: 100f
-        val posY = obj["top"]?.jsonPrimitive?.content?.replace("px", "")?.toFloatOrNull()
+        val posY = obj["top"]?.jsonPrimitive?.contentOrNull?.replace("px", "")?.toFloatOrNull()
             ?: obj["posY"]?.jsonPrimitive?.floatOrNull ?: 100f
 
         return BlockEntity(
@@ -62,79 +63,72 @@ object JsonBlockParser {
             type = type,
             posX = posX,
             posY = posY,
-            width = obj["width"]?.jsonPrimitive?.content?.replace("px", "")?.toIntOrNull()
+            width = obj["width"]?.jsonPrimitive?.contentOrNull?.replace("px", "")?.toIntOrNull()
                 ?: obj["width"]?.jsonPrimitive?.intOrNull ?: 220,
-            height = obj["height"]?.jsonPrimitive?.content?.replace("px", "")?.toIntOrNull()
+            height = obj["height"]?.jsonPrimitive?.contentOrNull?.replace("px", "")?.toIntOrNull()
                 ?: obj["height"]?.jsonPrimitive?.intOrNull ?: 180,
             contentJson = contentJson
         )
     }
 
     private fun parseChartContent(obj: JsonObject): String {
-        val status = obj["status"]?.jsonObject ?: obj["inputs"]?.jsonObject ?: obj
+        val inputs = ShinobiChartCalculator.parseInputs(obj)
         return buildJsonObject {
-            put("ninjutsu", status["ninjutsu"]?.jsonPrimitive?.floatOrNull ?: status["nin"]?.jsonPrimitive?.floatOrNull ?: 4f)
-            put("inteligencia", status["inteligencia"]?.jsonPrimitive?.floatOrNull ?: status["int"]?.jsonPrimitive?.floatOrNull ?: 4f)
-            put("chakra", status["chakra"]?.jsonPrimitive?.floatOrNull ?: status["cha"]?.jsonPrimitive?.floatOrNull ?: status["chakraMax"]?.jsonPrimitive?.floatOrNull ?: 4f)
-            put("taijutsu", status["taijutsu"]?.jsonPrimitive?.floatOrNull ?: status["tai"]?.jsonPrimitive?.floatOrNull ?: 4f)
-            put("vigor", status["vigor"]?.jsonPrimitive?.floatOrNull ?: status["vig"]?.jsonPrimitive?.floatOrNull ?: 4f)
-            put("genjutsu", status["genjutsu"]?.jsonPrimitive?.floatOrNull ?: status["gen"]?.jsonPrimitive?.floatOrNull ?: 4f)
+            put("taijutsu", inputs.taijutsu)
+            put("ninjutsu", inputs.ninjutsu)
+            put("genjutsu", inputs.genjutsu)
+            put("vigor", inputs.vigor)
+            put("inteligencia", inputs.inteligencia)
+            put("chakraMax", inputs.chakraMax)
+            putJsonObject("inputs") {
+                put("taijutsu", inputs.taijutsu)
+                put("ninjutsu", inputs.ninjutsu)
+                put("genjutsu", inputs.genjutsu)
+                put("vigor", inputs.vigor)
+                put("inteligencia", inputs.inteligencia)
+                put("chakraMax", inputs.chakraMax)
+            }
         }.toString()
     }
 
     private fun parseTextContent(obj: JsonObject): String {
         val campos = obj["campos"]?.jsonArray
-        val elements = mutableListOf<JsonElement>()
-
-        if (campos != null && campos.isNotEmpty()) {
-            campos.forEach { campo ->
-                val html = campo.jsonObject["html"]?.jsonPrimitive?.content ?: ""
-                elements.addAll(HtmlContentConverter.parseHtmlToElements(html))
+        val rawHtml = if (!campos.isNullOrEmpty()) {
+            campos.joinToString("\n") { c ->
+                if (c is JsonObject) {
+                    c["html"]?.jsonPrimitive?.contentOrNull
+                        ?: c["text"]?.jsonPrimitive?.contentOrNull
+                        ?: c["value"]?.jsonPrimitive?.contentOrNull
+                        ?: ""
+                } else {
+                    c.jsonPrimitive.contentOrNull ?: ""
+                }
             }
         } else {
-            val html = obj["text"]?.jsonPrimitive?.content ?: obj["html"]?.jsonPrimitive?.content ?: ""
-            elements.addAll(HtmlContentConverter.parseHtmlToElements(html))
-        }
-
-        val flatText = elements.joinToString("\n") {
-            val el = it.jsonObject
-            if (el["type"]?.jsonPrimitive?.content == "text") el["value"]?.jsonPrimitive?.content ?: "" else ""
+            obj["html"]?.jsonPrimitive?.contentOrNull
+                ?: obj["text"]?.jsonPrimitive?.contentOrNull
+                ?: obj["value"]?.jsonPrimitive?.contentOrNull
+                ?: ""
         }
 
         return buildJsonObject {
-            put("elements", JsonArray(elements))
-            put("text", flatText)
-            put("titleSize", 13)
-            put("align", "left")
+            put("text", rawHtml)
+            put("html", rawHtml)
+            put("fontSize", obj["fontSize"]?.jsonPrimitive?.intOrNull ?: 13)
+            put("align", obj["align"]?.jsonPrimitive?.contentOrNull ?: "left")
+            if (campos != null) {
+                put("campos", campos)
+            }
         }.toString()
     }
 
     private fun parseImageContent(obj: JsonObject): String {
-        val url = obj["url"]?.jsonPrimitive?.content ?: obj["src"]?.jsonPrimitive?.content ?: ""
-        val imgId = obj["imgId"]?.jsonPrimitive?.content ?: obj["id"]?.jsonPrimitive?.content ?: ""
-
-        val firstCampo = obj["campos"]?.jsonArray?.firstOrNull()?.jsonObject
-        val comp = firstCampo ?: obj["comprovante"]?.jsonObject ?: obj
-        val valor = comp["valor"]?.jsonPrimitive?.floatOrNull ?: obj["valor"]?.jsonPrimitive?.floatOrNull
-        val valorFormatted = comp["valorFormatted"]?.jsonPrimitive?.contentOrNull ?: obj["valorFormatted"]?.jsonPrimitive?.contentOrNull
-        val realizadoEm = comp["realizadoEm"]?.jsonPrimitive?.contentOrNull ?: obj["realizadoEm"]?.jsonPrimitive?.contentOrNull
-        val isPix = comp["isPix"]?.jsonPrimitive?.booleanOrNull ?: obj["isPix"]?.jsonPrimitive?.booleanOrNull ?: false
-        val pagador = comp["pagador"]?.jsonPrimitive?.contentOrNull ?: comp["de"]?.jsonPrimitive?.contentOrNull ?: obj["de"]?.jsonPrimitive?.contentOrNull
-        val destinatario = comp["destinatario"]?.jsonPrimitive?.contentOrNull ?: comp["para"]?.jsonPrimitive?.contentOrNull ?: obj["para"]?.jsonPrimitive?.contentOrNull
-        val instituicao = comp["instituicao"]?.jsonPrimitive?.contentOrNull ?: comp["banco"]?.jsonPrimitive?.contentOrNull ?: obj["instituicao"]?.jsonPrimitive?.contentOrNull
-        val rawText = comp["rawText"]?.jsonPrimitive?.contentOrNull ?: obj["rawText"]?.jsonPrimitive?.contentOrNull ?: ""
+        val url = obj["url"]?.jsonPrimitive?.contentOrNull ?: obj["src"]?.jsonPrimitive?.contentOrNull ?: ""
+        val imgId = obj["imgId"]?.jsonPrimitive?.contentOrNull ?: obj["id"]?.jsonPrimitive?.contentOrNull ?: ""
 
         return buildJsonObject {
             put("url", url)
             if (imgId.isNotEmpty()) put("imgId", imgId)
-            if (valor != null) put("valor", valor)
-            if (valorFormatted != null) put("valorFormatted", valorFormatted)
-            if (!realizadoEm.isNullOrBlank()) put("realizadoEm", realizadoEm)
-            if (isPix) put("isPix", true)
-            if (!pagador.isNullOrBlank()) put("pagador", pagador)
-            if (!destinatario.isNullOrBlank()) put("destinatario", destinatario)
-            if (!instituicao.isNullOrBlank()) put("instituicao", instituicao)
-            if (rawText.isNotBlank()) put("rawText", rawText)
         }.toString()
     }
 }

@@ -1,6 +1,7 @@
 package com.canvasstudio.features.export_portability
 
 import com.canvasstudio.data.local.entity.BlockEntity
+import com.canvasstudio.ui.block.modules.ShinobiChartCalculator
 import kotlinx.serialization.json.*
 
 object JsonBlockExporter {
@@ -14,12 +15,15 @@ object JsonBlockExporter {
                 put("brand", brandTitle)
             }
 
-            putJsonObject("blocos") {
+            val blocksObj = buildJsonObject {
                 blocks.forEach { block ->
-                    val blockKey = "data_t_${block.id}_${System.currentTimeMillis() % 100000}"
+                    val blockKey = "data_${block.type.firstOrNull() ?: 't'}_${block.id}_${System.currentTimeMillis() % 100000}"
                     put(blockKey, buildBlockJson(block))
                 }
             }
+
+            put("blocos", blocksObj)
+            put("workspaceData", blocksObj)
         }
         return json.encodeToString(JsonObject.serializer(), root)
     }
@@ -39,77 +43,45 @@ object JsonBlockExporter {
                 null
             }
 
-            val valor = content?.get("valor")?.jsonPrimitive?.floatOrNull
-            val valorFormatted = content?.get("valorFormatted")?.jsonPrimitive?.contentOrNull
-            val realizadoEm = content?.get("realizadoEm")?.jsonPrimitive?.contentOrNull
-            val isPix = content?.get("isPix")?.jsonPrimitive?.booleanOrNull == true || block.title.contains("PIX", true)
-            val pagador = content?.get("pagador")?.jsonPrimitive?.contentOrNull ?: content?.get("de")?.jsonPrimitive?.contentOrNull
-            val destinatario = content?.get("destinatario")?.jsonPrimitive?.contentOrNull ?: content?.get("para")?.jsonPrimitive?.contentOrNull
-            val instituicao = content?.get("instituicao")?.jsonPrimitive?.contentOrNull ?: content?.get("banco")?.jsonPrimitive?.contentOrNull
-            val rawText = content?.get("rawText")?.jsonPrimitive?.contentOrNull ?: ""
-
             when (block.type.lowercase()) {
                 "image" -> {
-                    val url = content?.get("url")?.jsonPrimitive?.content ?: ""
+                    val url = content?.get("url")?.jsonPrimitive?.contentOrNull ?: ""
                     put("url", url)
-                    content?.get("imgId")?.jsonPrimitive?.content?.let { put("imgId", it) }
-
-                    putJsonArray("campos") {
-                        addJsonObject {
-                            val sb = StringBuilder()
-                            if (valorFormatted != null) sb.append("<div><b>Valor:</b> $valorFormatted</div>")
-                            if (!realizadoEm.isNullOrBlank()) sb.append("<div><b>Realizado em:</b> $realizadoEm</div>")
-                            if (!pagador.isNullOrBlank()) sb.append("<div><b>De (Pagador):</b> $pagador</div>")
-                            if (!destinatario.isNullOrBlank()) sb.append("<div><b>Para (Destinatário):</b> $destinatario</div>")
-                            if (!instituicao.isNullOrBlank()) sb.append("<div><b>Instituição:</b> $instituicao</div>")
-                            if (rawText.isNotBlank()) sb.append("<div style=\"margin-top:4px;\"><b>Texto OCR:</b><br><pre>${rawText.replace("<", "&lt;").replace(">", "&gt;")}</pre></div>")
-
-                            put("html", if (sb.isNotEmpty()) sb.toString() else "<div><i>Comprovante</i></div>")
-                            put("className", "sub-campo")
-                            if (valor != null) put("valor", valor)
-                            if (valorFormatted != null) put("valorFormatted", valorFormatted)
-                            if (!realizadoEm.isNullOrBlank()) put("realizadoEm", realizadoEm)
-                            if (isPix) put("isPix", true)
-                            if (!pagador.isNullOrBlank()) {
-                                put("de", pagador)
-                                put("pagador", pagador)
-                            }
-                            if (!destinatario.isNullOrBlank()) {
-                                put("para", destinatario)
-                                put("destinatario", destinatario)
-                            }
-                            if (!instituicao.isNullOrBlank()) {
-                                put("instituicao", instituicao)
-                                put("banco", instituicao)
-                            }
-                            if (rawText.isNotBlank()) put("rawText", rawText)
-                        }
-                    }
+                    content?.get("imgId")?.jsonPrimitive?.contentOrNull?.let { put("imgId", it) }
                 }
                 "text" -> {
-                    val text = content?.get("text")?.jsonPrimitive?.content ?: ""
-                    val html = text
-                        .replace(Regex("\\*\\*(.*?)\\*\\*"), "<b>$1</b>")
-                        .replace(Regex("\\*(.*?)\\*"), "<i>$1</i>")
-                        .replace("\n", "<br>")
+                    val html = content?.get("html")?.jsonPrimitive?.contentOrNull
+                        ?: content?.get("text")?.jsonPrimitive?.contentOrNull
+                        ?: ""
+
+                    val finalHtml = if (html.contains("<") && html.contains(">")) {
+                        html
+                    } else {
+                        html
+                            .replace(Regex("\\*\\*(.*?)\\*\\*"), "<b>$1</b>")
+                            .replace(Regex("\\*(.*?)\\*"), "<i>$1</i>")
+                            .replace("\n", "<br>")
+                    }
 
                     putJsonArray("campos") {
                         addJsonObject {
-                            put("html", html)
+                            put("html", finalHtml)
                             put("className", "sub-campo")
-                            if (valor != null) put("valor", valor)
-                            if (valorFormatted != null) put("valorFormatted", valorFormatted)
-                            if (!realizadoEm.isNullOrBlank()) put("realizadoEm", realizadoEm)
-                            if (isPix) put("isPix", true)
-                            if (!pagador.isNullOrBlank()) put("de", pagador)
-                            if (!destinatario.isNullOrBlank()) put("para", destinatario)
-                            if (!instituicao.isNullOrBlank()) put("instituicao", instituicao)
-                            if (rawText.isNotBlank()) put("rawText", rawText)
                         }
                     }
                 }
                 "chart" -> {
-                    put("status", content ?: buildJsonObject {})
+                    val inputs = ShinobiChartCalculator.parseInputs(content ?: buildJsonObject {})
+                    val inputsObj = buildJsonObject {
+                        put("taijutsu", inputs.taijutsu)
+                        put("ninjutsu", inputs.ninjutsu)
+                        put("genjutsu", inputs.genjutsu)
+                        put("vigor", inputs.vigor)
+                        put("inteligencia", inputs.inteligencia)
+                        put("chakraMax", inputs.chakraMax)
+                    }
+                    put("inputs", inputsObj)
+                    put("status", inputsObj)
                 }
             }
         }

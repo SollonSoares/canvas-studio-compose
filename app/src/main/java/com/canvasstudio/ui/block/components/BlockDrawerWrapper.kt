@@ -62,7 +62,19 @@ fun BlockDrawerWrapper(
         onAddChartBlock = {
             val sX = ((-offset.x / density.density) + 100f) / scale
             val sY = ((-offset.y / density.density) + 100f) / scale
-            viewModel.insertBlock(BlockEntity(0, 0, "Radar Chart", "chart", sX, sY, 300, 300, "{\"ninjutsu\":5, \"inteligencia\":5, \"chakra\":5, \"taijutsu\":5, \"vigor\":5, \"genjutsu\":5}"))
+            viewModel.insertBlock(
+                BlockEntity(
+                    id = 0,
+                    projectId = 0,
+                    title = "STATUS SHINOBI",
+                    type = "chart",
+                    posX = sX,
+                    posY = sY,
+                    width = 280,
+                    height = 360,
+                    contentJson = """{"ninjutsu":0,"inteligencia":0,"chakraMax":6,"taijutsu":0,"vigor":0,"genjutsu":0}"""
+                )
+            )
             onCloseDrawer()
         },
         onExportPdf = onLaunchPdfExport,
@@ -83,16 +95,38 @@ fun BlockDrawerWrapper(
         },
         selectedBlock = selectedBlock,
         onDeselectBlock = { viewModel.selectBlock(null) },
-        onUpdateTitle = { viewModel.updateSelectedTitle(it) },
+        onUpdateTitle = { title ->
+            if (selectedBlock != null) viewModel.updateBlockLive(selectedBlock.copy(title = title))
+        },
         onUpdateContentText = { if (selectedBlock != null) viewModel.updateBlockContentText(selectedBlock, it) },
-        onUpdateTextFormatting = { sz, b, it, al, col -> viewModel.updateSelectedFormatting(sz, b, it, al, col) },
-        onUpdateChartAttribute = { attr, value -> viewModel.updateSelectedChartAttribute(attr, value) },
-        onUpdateImageUrl = { url -> viewModel.updateSelectedImageUrl(url) },
-        onUpdateValue = { valNum -> viewModel.updateSelectedValue(valNum) },
-        onUpdateRealizadoEm = { dateStr -> viewModel.updateSelectedRealizadoEm(dateStr) },
-        onUpdatePagador = { pag -> viewModel.updateSelectedPagador(pag) },
-        onUpdateDestinatario = { dest -> viewModel.updateSelectedDestinatario(dest) },
-        onUpdateInstituicao = { inst -> viewModel.updateSelectedInstituicao(inst) },
+        onUpdateTextFormatting = { sz, b, it, al, col ->
+            if (selectedBlock != null) viewModel.updateBlock(com.canvasstudio.ui.block.delegates.BlockPropertyUpdater.updateFormatting(selectedBlock, sz, b, it, al, col))
+        },
+        onInsertTable = { if (selectedBlock != null) viewModel.insertTable(selectedBlock) },
+        onInsertCallout = { if (selectedBlock != null) viewModel.insertCallout(selectedBlock) },
+        onInsertCollapsible = { if (selectedBlock != null) viewModel.insertCollapsible(selectedBlock) },
+        onInsertList = { if (selectedBlock != null) viewModel.insertList(selectedBlock) },
+        onUpdateChartAttribute = { attr, value ->
+            if (selectedBlock != null) viewModel.updateBlockLive(com.canvasstudio.ui.block.delegates.BlockPropertyUpdater.updateChartAttribute(selectedBlock, attr, value))
+        },
+        onUpdateImageUrl = { url ->
+            if (selectedBlock != null) viewModel.updateBlock(com.canvasstudio.ui.block.delegates.BlockPropertyUpdater.updateImageUrl(selectedBlock, url))
+        },
+        onUpdateValue = { valNum ->
+            if (selectedBlock != null) viewModel.updateBlock(com.canvasstudio.ui.block.delegates.BlockPropertyUpdater.updateValue(selectedBlock, valNum))
+        },
+        onUpdateRealizadoEm = { dateStr ->
+            if (selectedBlock != null) viewModel.updateBlock(com.canvasstudio.ui.block.delegates.BlockPropertyUpdater.updateRealizadoEm(selectedBlock, dateStr))
+        },
+        onUpdatePagador = { pag ->
+            if (selectedBlock != null) viewModel.updateBlock(com.canvasstudio.ui.block.delegates.BlockPropertyUpdater.updatePartyField(selectedBlock, "pagador", pag))
+        },
+        onUpdateDestinatario = { dest ->
+            if (selectedBlock != null) viewModel.updateBlock(com.canvasstudio.ui.block.delegates.BlockPropertyUpdater.updatePartyField(selectedBlock, "destinatario", dest))
+        },
+        onUpdateInstituicao = { inst ->
+            if (selectedBlock != null) viewModel.updateBlock(com.canvasstudio.ui.block.delegates.BlockPropertyUpdater.updatePartyField(selectedBlock, "instituicao", inst))
+        },
         onDuplicateBlock = { viewModel.duplicateBlock(it) },
         onDeleteBlock = { viewModel.deleteBlock(it) },
         colors = colors

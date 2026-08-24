@@ -42,10 +42,12 @@ object BlockPropertyUpdater {
         return try {
             val mutableMap = parseContentToMap(block.contentJson)
             mutableMap["text"] = JsonPrimitive(newText)
+            mutableMap["html"] = JsonPrimitive(newText)
             mutableMap.remove("elements")
+            mutableMap.remove("campos")
             block.copy(contentJson = JsonObject(mutableMap).toString())
         } catch (e: Exception) {
-            block.copy(contentJson = buildJsonObject { put("text", newText) }.toString())
+            block.copy(contentJson = buildJsonObject { put("text", newText); put("html", newText) }.toString())
         }
     }
 
@@ -71,6 +73,11 @@ object BlockPropertyUpdater {
     fun updateChartAttribute(block: BlockEntity, attribute: String, value: Float): BlockEntity {
         val mutableMap = parseContentToMap(block.contentJson)
         mutableMap[attribute] = JsonPrimitive(value)
+        val inputs = (mutableMap["inputs"] as? JsonObject)?.toMutableMap()
+        if (inputs != null) {
+            inputs[attribute] = JsonPrimitive(value)
+            mutableMap["inputs"] = JsonObject(inputs)
+        }
         return block.copy(contentJson = JsonObject(mutableMap).toString())
     }
 

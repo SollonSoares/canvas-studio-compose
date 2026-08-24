@@ -32,6 +32,7 @@ class GallerySyncService(private val context: Context) {
         blocks: List<BlockEntity>,
         galleryBaseUrl: String,
         githubToken: String = "",
+        authorIdentifier: String = "",
         repoOwner: String = "SollonSoares",
         repoName: String = "galeria",
         repoPath: String = "imagens",
@@ -47,6 +48,24 @@ class GallerySyncService(private val context: Context) {
         val exportedFiles = mutableListOf<File>()
         val publicUrls = mutableListOf<String>()
         val errorMessages = mutableListOf<String>()
+
+        val resolvedAuthor = if (authorIdentifier.isNotBlank()) {
+            authorIdentifier.trim()
+        } else {
+            try {
+                val androidId = android.provider.Settings.Secure.getString(context.contentResolver, android.provider.Settings.Secure.ANDROID_ID)
+                if (!androidId.isNullOrBlank()) "dev_${androidId.take(6)}" else "dev_${android.os.Build.MODEL.take(8)}"
+            } catch (e: Exception) {
+                "dev_${android.os.Build.MODEL.take(8)}"
+            }
+        }
+
+        val sanitizedAuthor = resolvedAuthor
+            .lowercase()
+            .replace(Regex("[^a-z0-9_]"), "_")
+            .trim('_')
+            .take(20)
+            .ifBlank { "dev" }
 
         val updatedBlocks = blocks.map { block ->
             if (block.type.equals("image", ignoreCase = true)) {
@@ -70,11 +89,7 @@ class GallerySyncService(private val context: Context) {
                         .take(30)
                         .ifBlank { "imagem" }
 
-                    val fileName = if (sanitizedTitle.isNotEmpty()) {
-                        "${sanitizedTitle}_${block.id}.jpg"
-                    } else {
-                        "img_${block.id}.jpg"
-                    }
+                    val fileName = "${sanitizedTitle}_${sanitizedAuthor}_${block.id}.jpg"
 
                     val destFile = File(stagingDir, fileName)
 
@@ -120,7 +135,7 @@ class GallerySyncService(private val context: Context) {
                     if (copySuccess) {
                         exportedFiles.add(destFile)
 
-                        // Se o token do GitHub estiver configurado, faz o commit direto no repositório!
+                        // Se o token do GitHub estiver configurado, faz o commit direto no repositório com o autor!
                         if (githubToken.isNotBlank()) {
                             val uploadResult = gitHubApiService.uploadFile(
                                 owner = repoOwner,
@@ -129,7 +144,8 @@ class GallerySyncService(private val context: Context) {
                                 branch = repoBranch,
                                 token = githubToken.trim(),
                                 file = destFile,
-                                customFileName = fileName
+                                customFileName = fileName,
+                                commitAuthor = resolvedAuthor
                             )
 
                             if (uploadResult.success) {

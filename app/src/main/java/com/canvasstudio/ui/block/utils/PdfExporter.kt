@@ -423,47 +423,174 @@ object PdfExporter {
             }
         }
 
-        val cleanText = text.replace("**", "").replace("#", "").trim()
-        if (cleanText.isNotEmpty()) {
-            val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = 0xFF334155.toInt()
-                textSize = 9.5f
-            }
-            val availableW = maxOf(10, contentRect.width().toInt())
-            val availableH = maxOf(10f, contentRect.bottom - currentY)
+        if (text.isNotBlank()) {
+            val nodes = com.canvasstudio.ui.block.utils.HtmlParser.parse(text)
+            val availableW = maxOf(10f, contentRect.width())
 
-            val textLayout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                StaticLayout.Builder.obtain(cleanText, 0, cleanText.length, textPaint, availableW).build()
-            } else {
-                @Suppress("DEPRECATION")
-                StaticLayout(cleanText, textPaint, availableW, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false)
-            }
+            nodes.forEach { node ->
+                if (currentY >= contentRect.bottom - 4f) return@forEach
 
-            canvas.save()
-            canvas.translate(contentRect.left, currentY)
-            canvas.clipRect(0f, 0f, availableW.toFloat(), availableH)
-            textLayout.draw(canvas)
-            canvas.restore()
+                when (node) {
+                    is com.canvasstudio.ui.block.utils.HtmlNode.Heading -> {
+                        val headPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                            color = 0xFF0284C7.toInt()
+                            textSize = if (node.level == 1) 12f else 10.5f
+                            isFakeBoldText = true
+                        }
+                        canvas.drawText(node.text, contentRect.left, currentY + 10f, headPaint)
+                        currentY += 16f
+                    }
+                    is com.canvasstudio.ui.block.utils.HtmlNode.Table -> {
+                        val tableH = drawPdfTable(canvas, node, contentRect.left, currentY, availableW)
+                        currentY += tableH + 6f
+                    }
+                    is com.canvasstudio.ui.block.utils.HtmlNode.CalloutBox -> {
+                        val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                            color = 0x150284C7
+                            style = Paint.Style.FILL
+                        }
+                        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                            color = 0x500284C7
+                            style = Paint.Style.STROKE
+                            strokeWidth = 0.8f
+                        }
+                        val boxH = 26f
+                        val boxRect = RectF(contentRect.left, currentY, contentRect.right, currentY + boxH)
+                        canvas.drawRoundRect(boxRect, 4f, 4f, boxPaint)
+                        canvas.drawRoundRect(boxRect, 4f, 4f, borderPaint)
+
+                        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                            color = 0xFF1E293B.toInt()
+                            textSize = 8.5f
+                        }
+                        canvas.drawText(node.htmlContent.take(60), contentRect.left + 6f, currentY + 16f, textPaint)
+                        currentY += boxH + 6f
+                    }
+                    is com.canvasstudio.ui.block.utils.HtmlNode.PreBlock -> {
+                        val prePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                            color = 0xFF1E293B.toInt()
+                            style = Paint.Style.FILL
+                        }
+                        val preH = 24f
+                        val preRect = RectF(contentRect.left, currentY, contentRect.right, currentY + preH)
+                        canvas.drawRoundRect(preRect, 4f, 4f, prePaint)
+                        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                            color = 0xFF38BDF8.toInt()
+                            textSize = 8f
+                        }
+                        canvas.drawText(node.content.take(50), contentRect.left + 6f, currentY + 15f, textPaint)
+                        currentY += preH + 6f
+                    }
+                    else -> {
+                        val cleanText = com.canvasstudio.ui.block.utils.HtmlParser.cleanHtmlTags(
+                            when (node) {
+                                is com.canvasstudio.ui.block.utils.HtmlNode.ListItem -> "• ${node.text}"
+                                is com.canvasstudio.ui.block.utils.HtmlNode.Paragraph -> node.text
+                                else -> ""
+                            }
+                        )
+                        if (cleanText.isNotBlank()) {
+                            val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                                color = 0xFF334155.toInt()
+                                textSize = 9.5f
+                            }
+                            val availW = maxOf(10, availableW.toInt())
+                            val availH = maxOf(10f, contentRect.bottom - currentY)
+
+                            val textLayout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                StaticLayout.Builder.obtain(cleanText, 0, cleanText.length, textPaint, availW).build()
+                            } else {
+                                @Suppress("DEPRECATION")
+                                StaticLayout(cleanText, textPaint, availW, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false)
+                            }
+
+                            canvas.save()
+                            canvas.translate(contentRect.left, currentY)
+                            canvas.clipRect(0f, 0f, availW.toFloat(), availH)
+                            textLayout.draw(canvas)
+                            canvas.restore()
+
+                            currentY += textLayout.height.toFloat() + 4f
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    private fun drawPdfTable(
+        canvas: Canvas,
+        table: com.canvasstudio.ui.block.utils.HtmlNode.Table,
+        left: Float,
+        top: Float,
+        width: Float
+    ): Float {
+        val totalCols = maxOf(1, maxOf(table.headers.size, table.rows.maxOfOrNull { it.size } ?: 1))
+        val colWidth = width / totalCols
+        val rowHeight = 16f
+        var curY = top
+
+        val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFCBD5E1.toInt()
+            style = Paint.Style.STROKE
+            strokeWidth = 0.6f
+        }
+        val headerBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0x250284C7
+            style = Paint.Style.FILL
+        }
+        val headerTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF0284C7.toInt()
+            textSize = 8f
+            isFakeBoldText = true
+        }
+        val cellTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF334155.toInt()
+            textSize = 8f
+        }
+
+        // Draw headers
+        if (table.headers.isNotEmpty()) {
+            val headerRect = RectF(left, curY, left + width, curY + rowHeight)
+            canvas.drawRect(headerRect, headerBgPaint)
+            canvas.drawRect(headerRect, gridPaint)
+
+            table.headers.forEachIndexed { i, h ->
+                val cellX = left + i * colWidth
+                canvas.drawLine(cellX, curY, cellX, curY + rowHeight, gridPaint)
+                canvas.drawText(h.take(15), cellX + 4f, curY + 11f, headerTextPaint)
+            }
+            curY += rowHeight
+        }
+
+        // Draw rows
+        table.rows.take(10).forEach { row ->
+            val rowRect = RectF(left, curY, left + width, curY + rowHeight)
+            canvas.drawRect(rowRect, gridPaint)
+
+            for (i in 0 until totalCols) {
+                val cellX = left + i * colWidth
+                canvas.drawLine(cellX, curY, cellX, curY + rowHeight, gridPaint)
+                val cellVal = row.getOrNull(i) ?: ""
+                canvas.drawText(cellVal.take(15), cellX + 4f, curY + 11f, cellTextPaint)
+            }
+            curY += rowHeight
+        }
+
+        return curY - top
     }
 
     private fun drawChartContent(canvas: Canvas, block: BlockEntity, contentRect: RectF) {
         val json = parseJson(block.contentJson)
-        val root = json["inputs"]?.jsonObject ?: json
-        val stats = listOf(
-            root["ninjutsu"]?.jsonPrimitive?.floatOrNull ?: root["nin"]?.jsonPrimitive?.floatOrNull ?: 5f,
-            root["inteligencia"]?.jsonPrimitive?.floatOrNull ?: root["int"]?.jsonPrimitive?.floatOrNull ?: 5f,
-            root["chakra"]?.jsonPrimitive?.floatOrNull ?: root["cha"]?.jsonPrimitive?.floatOrNull ?: root["chakraMax"]?.jsonPrimitive?.floatOrNull ?: 5f,
-            root["taijutsu"]?.jsonPrimitive?.floatOrNull ?: root["tai"]?.jsonPrimitive?.floatOrNull ?: 5f,
-            root["vigor"]?.jsonPrimitive?.floatOrNull ?: root["vig"]?.jsonPrimitive?.floatOrNull ?: 5f,
-            root["genjutsu"]?.jsonPrimitive?.floatOrNull ?: root["gen"]?.jsonPrimitive?.floatOrNull ?: 5f
-        )
-        val labels = listOf("NIN", "INT", "CHK", "TAI", "VIG", "GEN")
-        val maxVal = maxOf(10f, (stats.maxOrNull() ?: 5f))
+        val inputs = com.canvasstudio.ui.block.modules.ShinobiChartCalculator.parseInputs(json)
+        val notas = com.canvasstudio.ui.block.modules.ShinobiChartCalculator.calcularNotas(inputs)
+        val stats = notas.asList
+        val labels = com.canvasstudio.ui.block.modules.ShinobiChartCalculator.LABELS
+        val tetoSistema = com.canvasstudio.ui.block.modules.ShinobiChartCalculator.TETO_SISTEMA
 
         val cx = contentRect.centerX()
-        val cy = contentRect.centerY()
-        val radius = minOf(contentRect.width() / 2f - 24f, contentRect.height() / 2f - 12f).coerceAtLeast(20f)
+        val cy = contentRect.centerY() - 8f
+        val radius = minOf(contentRect.width() / 2f - 24f, (contentRect.height() - 20f) / 2f - 12f).coerceAtLeast(20f)
 
         val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = 0xFFCBD5E1.toInt()
@@ -471,21 +598,22 @@ object PdfExporter {
             strokeWidth = 0.8f
         }
         val polyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0x440284C7
+            color = 0x59FF453A // rgba(255, 69, 58, 0.35)
             style = Paint.Style.FILL
         }
         val polyBorder = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFF0284C7.toInt()
+            color = 0xFFFF453A.toInt() // rgba(255, 69, 58, 1)
             style = Paint.Style.STROKE
-            strokeWidth = 1.5f
+            strokeWidth = 1.8f
         }
         val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFF64748B.toInt()
-            textSize = 8f
+            color = 0xFF334155.toInt()
+            textSize = 7.5f
+            isFakeBoldText = true
             textAlign = Paint.Align.CENTER
         }
 
-        // Anéis do radar
+        // 1. Níveis Guia Concêntricos (2, 4, 6, 8)
         for (step in 1..4) {
             val r = radius * (step / 4f)
             val ringPath = Path()
@@ -499,22 +627,23 @@ object PdfExporter {
             canvas.drawPath(ringPath, gridPaint)
         }
 
-        // Eixos radiais e rótulos
+        // 2. Eixos radiais e rótulos formatados NOME (X.X)
         for (i in 0 until 6) {
             val angle = (i * 60f - 90f) * (PI / 180f)
             val px = cx + (radius * cos(angle)).toFloat()
             val py = cy + (radius * sin(angle)).toFloat()
             canvas.drawLine(cx, cy, px, py, gridPaint)
 
-            val lx = cx + ((radius + 10f) * cos(angle)).toFloat()
-            val ly = cy + ((radius + 10f) * sin(angle)).toFloat() + 3f
-            canvas.drawText(labels[i], lx, ly, labelPaint)
+            val lx = cx + ((radius + 11f) * cos(angle)).toFloat()
+            val ly = cy + ((radius + 11f) * sin(angle)).toFloat() + 2.5f
+            val formattedVal = String.format(Locale.US, "%.1f", stats[i])
+            canvas.drawText("${labels[i]} ($formattedVal)", lx, ly, labelPaint)
         }
 
-        // Polígono preenchido
+        // 3. Polígono preenchido Shinobi
         val polyPath = Path()
         for (i in 0 until 6) {
-            val v = (stats[i] / maxVal).coerceIn(0.1f, 1f)
+            val v = (stats[i] / tetoSistema).coerceIn(0f, 1f)
             val r = radius * v
             val angle = (i * 60f - 90f) * (PI / 180f)
             val px = cx + (r * cos(angle)).toFloat()
@@ -524,6 +653,15 @@ object PdfExporter {
         polyPath.close()
         canvas.drawPath(polyPath, polyPaint)
         canvas.drawPath(polyPath, polyBorder)
+
+        // 4. Média Geral no rodapé do Card
+        val mediaPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFFF453A.toInt()
+            textSize = 8.5f
+            isFakeBoldText = true
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText("Média Geral: ${notas.formattedMedia()}", cx, contentRect.bottom - 2f, mediaPaint)
     }
 
     fun generatePdfFile(

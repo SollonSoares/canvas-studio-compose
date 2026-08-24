@@ -27,7 +27,8 @@ class GitHubApiService {
         branch: String = "main",
         token: String,
         file: File,
-        customFileName: String? = null
+        customFileName: String? = null,
+        commitAuthor: String = ""
     ): GitHubUploadResult = withContext(Dispatchers.IO) {
         val fileName = customFileName ?: file.name
         val cleanPath = path.trim('/').ifEmpty { "imagens" }
@@ -52,8 +53,14 @@ class GitHubApiService {
             val base64Content = Base64.encodeToString(fileBytes, Base64.NO_WRAP)
 
             // 3. Montar payload JSON
+            val commitMsg = if (commitAuthor.isNotBlank()) {
+                "feat(galeria): upload $fileName via $commitAuthor (Canvas Studio)"
+            } else {
+                "feat(galeria): upload $fileName via Canvas Studio"
+            }
+
             val payload = buildJsonObject {
-                put("message", "feat(galeria): upload $fileName via Canvas Studio")
+                put("message", commitMsg)
                 put("content", base64Content)
                 put("branch", branch)
                 if (existingSha != null) {

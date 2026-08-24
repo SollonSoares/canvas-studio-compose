@@ -31,6 +31,20 @@ open class UserPreferencesManager(private val context: Context? = null) {
         val THEME_STYLE_KEY = stringPreferencesKey("theme_style")
         val GALLERY_BASE_URL_KEY = stringPreferencesKey("gallery_base_url")
         val GITHUB_TOKEN_KEY = stringPreferencesKey("github_token")
+        val AUTHOR_NAME_KEY = stringPreferencesKey("author_name")
+    }
+
+    open val authorNameFlow: Flow<String> by lazy {
+        context?.dataStore?.data
+            ?.catch { exception ->
+                if (exception is IOException) emit(emptyPreferences()) else throw exception
+            }
+            ?.map { it[PreferencesKeys.AUTHOR_NAME_KEY] ?: "" }
+            ?: kotlinx.coroutines.flow.flowOf("")
+    }
+
+    open suspend fun setAuthorName(name: String) {
+        context?.dataStore?.edit { it[PreferencesKeys.AUTHOR_NAME_KEY] = name }
     }
 
     open val githubTokenFlow: Flow<String> by lazy {
@@ -106,11 +120,11 @@ open class UserPreferencesManager(private val context: Context? = null) {
             }
             ?.map { preferences ->
                 Pair(
-                    preferences[PreferencesKeys.CANVAS_WIDTH] ?: 2000,
-                    preferences[PreferencesKeys.CANVAS_HEIGHT] ?: 2000
+                    preferences[PreferencesKeys.CANVAS_WIDTH] ?: 10000,
+                    preferences[PreferencesKeys.CANVAS_HEIGHT] ?: 10000
                 )
             }
-            ?: kotlinx.coroutines.flow.flowOf(Pair(2000, 2000))
+            ?: kotlinx.coroutines.flow.flowOf(Pair(10000, 10000))
     }
 
     open suspend fun setBrandTitle(title: String) {

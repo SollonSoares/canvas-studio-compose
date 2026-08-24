@@ -16,7 +16,6 @@ import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,7 +42,7 @@ fun BoxScope.BlockFloatingZoomBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = { onScaleChange((scale / 1.25f).coerceIn(0.15f, 3f)) },
+                onClick = { onScaleChange((scale / 1.3f).coerceIn(0.05f, 5.0f)) },
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(Icons.Rounded.Remove, "Zoom Out", tint = colors.textMain, modifier = Modifier.size(16.dp))
@@ -58,7 +57,7 @@ fun BoxScope.BlockFloatingZoomBar(
                     .padding(horizontal = 6.dp)
             )
             IconButton(
-                onClick = { onScaleChange((scale * 1.25f).coerceIn(0.15f, 3f)) },
+                onClick = { onScaleChange((scale * 1.3f).coerceIn(0.05f, 5.0f)) },
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(Icons.Rounded.Add, "Zoom In", tint = colors.textMain, modifier = Modifier.size(16.dp))
@@ -68,7 +67,7 @@ fun BoxScope.BlockFloatingZoomBar(
                 onClick = onResetVision,
                 modifier = Modifier.size(32.dp)
             ) {
-                Icon(Icons.Rounded.CenterFocusStrong, "Centralizar", tint = colors.accent, modifier = Modifier.size(16.dp))
+                Icon(Icons.Rounded.CenterFocusStrong, "Centralizar Workspace", tint = colors.accent, modifier = Modifier.size(16.dp))
             }
         }
     }

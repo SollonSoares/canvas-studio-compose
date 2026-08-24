@@ -11,6 +11,8 @@ import com.canvasstudio.ui.theme.CanvasColors
 fun SettingsGeneralSection(
     title: String,
     onTitleChange: (String) -> Unit,
+    authorName: String = "",
+    onAuthorNameChange: (String) -> Unit = {},
     galleryBaseUrl: String,
     onGalleryBaseUrlChange: (String) -> Unit,
     githubToken: String,
@@ -23,6 +25,14 @@ fun SettingsGeneralSection(
             value = title,
             onValueChange = onTitleChange,
             label = "Título do App / Ficha",
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(8.dp))
+        CanvasTextField(
+            value = authorName,
+            onValueChange = onAuthorNameChange,
+            label = "Autor / Identificador do Upload",
+            placeholder = "Ex: sollon ou meu_aparelho",
             modifier = Modifier.fillMaxWidth()
         )
 

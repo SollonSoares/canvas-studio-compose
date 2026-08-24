@@ -14,6 +14,7 @@ object CanvasExportSyncCoordinator {
         blocks: List<BlockEntity>,
         galleryBaseUrl: String,
         githubToken: String,
+        authorName: String = "",
         blockRepository: BlockRepository,
         onShareZip: (File) -> Unit,
         onEmitEvent: suspend (String) -> Unit
@@ -23,7 +24,7 @@ object CanvasExportSyncCoordinator {
             return
         }
         val syncService = GallerySyncService(context)
-        val result = syncService.syncBlocksToGallery(blocks, galleryBaseUrl, githubToken)
+        val result = syncService.syncBlocksToGallery(blocks, galleryBaseUrl, githubToken, authorName)
         if (result.syncedCount > 0) {
             result.updatedBlocks.forEach { blockRepository.updateBlock(it) }
             val msg = buildString {

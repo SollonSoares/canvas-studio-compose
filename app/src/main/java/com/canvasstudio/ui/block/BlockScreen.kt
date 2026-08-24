@@ -130,7 +130,7 @@ fun BlockScreen(
             Modifier.padding(padding).fillMaxSize().background(colors.bgMain)
                 .pointerInput(Unit) {
                     detectTransformGestures { _, pan: Offset, zoom: Float, _ ->
-                        scale = (scale * zoom).coerceIn(0.15f, 3f)
+                        scale = (scale * zoom).coerceIn(0.05f, 5.0f)
                         offset += pan
                     }
                 }
@@ -163,8 +163,10 @@ fun BlockScreen(
                 val canvasConfig by viewModel.canvasConfig.collectAsState()
                 val galleryBaseUrl by viewModel.galleryBaseUrl.collectAsStateWithLifecycle()
                 val githubToken by viewModel.githubToken.collectAsStateWithLifecycle()
+                val authorName by viewModel.authorName.collectAsStateWithLifecycle()
                 SettingsModal(
                     title = brandTitle, onTitleChange = { viewModel.setBrandTitle(it) },
+                    authorName = authorName, onAuthorNameChange = { viewModel.setAuthorName(it) },
                     themeStyle = themeStyle, onThemeStyleChange = { viewModel.setThemeStyle(it) },
                     galleryBaseUrl = galleryBaseUrl, onGalleryBaseUrlChange = { viewModel.setGalleryBaseUrl(it) },
                     githubToken = githubToken, onGithubTokenChange = { viewModel.setGithubToken(it) },
