@@ -1,7 +1,9 @@
 package com.canvasstudio.ui.block
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.canvasstudio.data.local.entity.BlockEntity
@@ -10,6 +12,7 @@ import com.canvasstudio.data.repository.BlockRepository
 import com.canvasstudio.domain.model.CanvasConfig
 import com.canvasstudio.features.export_portability.JsonPortabilityService
 import com.canvasstudio.ui.block.delegates.*
+import com.canvasstudio.ui.block.utils.PdfExporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -25,6 +28,9 @@ class BlockViewModel(
     private val _events = MutableSharedFlow<String>()
     val events: SharedFlow<String> = _events.asSharedFlow()
 
+    private val _isExportingImages = MutableStateFlow(false)
+    val isExportingImages: StateFlow<Boolean> = _isExportingImages.asStateFlow()
+
     private val searchEngine = CanvasSearchEngine()
     val searchQuery: StateFlow<String> = searchEngine.searchQuery
     val appliedQuery: StateFlow<String> = searchEngine.appliedQuery
@@ -36,6 +42,7 @@ class BlockViewModel(
     val isLocked = userPreferencesManager.isLockedFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val themeStyle = userPreferencesManager.themeStyleFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "cupertino")
     val galleryBaseUrl = userPreferencesManager.galleryBaseUrlFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "https://sollonsoares.github.io/galeria/imagens/")
+    val githubToken = userPreferencesManager.githubTokenFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val authorName = userPreferencesManager.authorNameFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val canvasDimensions = userPreferencesManager.canvasDimensionsFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(10000, 10000))
 
@@ -181,6 +188,16 @@ class BlockViewModel(
         } catch (e: Exception) { _events.emit("Erro ao importar item: ${e.message}") }
     }
 
+    fun importTextShared(text: String, subject: String?) = viewModelScope.launch(Dispatchers.IO) {
+        try {
+            val count = (uiState.value as? BlockUiState.Success)?.blocks?.size ?: 0
+            val spawn = 60f + (count % 5) * 35f
+            val (block, msg) = CanvasMediaCoordinator.importText(text, subject, spawn, spawn, _currentProjectId.value)
+            blockRepository.insertBlock(block)
+            _events.emit(msg)
+        } catch (e: Exception) { _events.emit("Erro ao importar texto: ${e.message}") }
+    }
+
     fun updateBlockImageFromUri(block: BlockEntity, uri: Uri, context: Context) = viewModelScope.launch(Dispatchers.IO) {
         try {
             CanvasMediaCoordinator.updateImageFromUri(context, block, uri)?.let {
@@ -188,6 +205,20 @@ class BlockViewModel(
                 _events.emit("Imagem atualizada com sucesso!")
             }
         } catch (e: Exception) { _events.emit("Erro ao atualizar imagem: ${e.message}") }
+    }
+
+    fun getCachedImage(imgId: String, onResult: (String?) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
+        val cached = blockRepository.getCachedImage(imgId)
+        kotlinx.coroutines.withContext(Dispatchers.Main) {
+            onResult(cached)
+        }
+    }
+
+    fun cacheImage(imgId: String, url: String) = viewModelScope.launch(Dispatchers.IO) {
+        val base64 = CanvasMediaCoordinator.downloadImageBase64(url)
+        if (base64 != null) {
+            blockRepository.saveImageCache(imgId, base64)
+        }
     }
 
     // Export Controls
@@ -213,10 +244,20 @@ class BlockViewModel(
             _events.emit("O canvas está vazio. Nada para exportar.")
             return@launch
         }
-        val isDark = userPreferencesManager.darkModeFlow.first()
-        val author = userPreferencesManager.authorNameFlow.first()
-        PdfExporter.exportBlocksToPdf(context, blocks, destinationUri, brandTitle.value, author, isDark) { success, msg ->
-            viewModelScope.launch { _events.emit(msg) }
+        try {
+            context.contentResolver.openOutputStream(destinationUri)?.use { outputStream ->
+                PdfExporter.exportCanvasToPdf(
+                    context = context,
+                    blocks = blocks,
+                    outputStream = outputStream,
+                    documentTitle = brandTitle.value,
+                    canvasWidth = canvasDimensions.value.first,
+                    canvasHeight = canvasDimensions.value.second
+                )
+            }
+            _events.emit("PDF exportado com sucesso!")
+        } catch (e: Exception) {
+            _events.emit("Erro ao exportar PDF: ${e.message}")
         }
     }
 
@@ -226,31 +267,67 @@ class BlockViewModel(
             _events.emit("O canvas está vazio. Nada para compartilhar.")
             return@launch
         }
-        val isDark = userPreferencesManager.darkModeFlow.first()
-        val author = userPreferencesManager.authorNameFlow.first()
-        PdfExporter.exportAndSharePdf(context, blocks, filename, brandTitle.value, author, isDark) { success, msg ->
-            viewModelScope.launch { _events.emit(msg) }
+        try {
+            PdfExporter.sharePdf(
+                context = context,
+                blocks = blocks,
+                documentTitle = brandTitle.value,
+                fileName = filename
+            )
+        } catch (e: Exception) {
+            _events.emit("Erro ao compartilhar PDF: ${e.message}")
         }
     }
 
     fun syncToGallery(context: Context) = viewModelScope.launch(Dispatchers.IO) {
         try {
+            _isExportingImages.value = true
             val blocks = (uiState.value as? BlockUiState.Success)?.blocks ?: emptyList()
             val token = userPreferencesManager.githubTokenFlow.first()
             val author = userPreferencesManager.authorNameFlow.first()
             val baseUrl = userPreferencesManager.galleryBaseUrlFlow.first()
-            val res = CanvasMediaCoordinator.syncImagesToGallery(context, blocks, token, author, baseUrl) { updated ->
-                blockRepository.updateBlocks(updated)
-            }
-            _events.emit(res)
+            CanvasExportSyncCoordinator.syncToGallery(
+                context = context,
+                blocks = blocks,
+                galleryBaseUrl = baseUrl,
+                githubToken = token,
+                authorName = author,
+                blockRepository = blockRepository,
+                onShareZip = { zipFile ->
+                    try {
+                        val zipUri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            zipFile
+                        )
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "application/zip"
+                            putExtra(Intent.EXTRA_STREAM, zipUri)
+                            putExtra(Intent.EXTRA_SUBJECT, "Imagens da Galeria - Canvas Studio")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        val chooser = Intent.createChooser(shareIntent, "Compartilhar Imagens").apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(chooser)
+                    } catch (e: Exception) {
+                        viewModelScope.launch { _events.emit("Erro ao compartilhar zip: ${e.message}") }
+                    }
+                },
+                onEmitEvent = { _events.emit(it) }
+            )
         } catch (e: Exception) {
             _events.emit("Erro ao sincronizar galeria: ${e.message}")
+        } finally {
+            _isExportingImages.value = false
         }
     }
 
     fun autoOrganizeBlocks() = viewModelScope.launch(Dispatchers.Default) {
         val blocks = (uiState.value as? BlockUiState.Success)?.blocks ?: return@launch
-        val organized = CanvasAutoOrganizer.organize(blocks, _canvasConfig.value.canvasWidth)
-        blockRepository.updateBlocks(organized)
+        val organized = CanvasAutoOrganizer.organize(blocks, canvasDimensions.value.first)
+        blockRepository.insertBlocks(organized)
     }
 }
+
